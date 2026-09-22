@@ -8,6 +8,7 @@ use App\Bootstrap\App;
 use App\Database\Database;
 use App\Modules\Shops\ShopRepository;
 use App\Modules\Categories\CategoryRepository;
+use App\Modules\Subscriptions\EntitlementService;
 use App\Support\Csrf;
 use App\Support\Session;
 use App\Support\Auth;
@@ -28,7 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $action = $_POST['action'] ?? '';
         if ($action === 'create') {
-            $name = trim((string)($_POST['name'] ?? ''));
+            try {
+            (new EntitlementService($db))->assertCanCreate($shopId, 'categories.max', 'categories');
+        } catch (\Throwable $limitError) {
+            Session::flash('error', $limitError->getMessage());
+            header('Location: /categories');
+            exit;
+        }
+
+        $name = trim((string)($_POST['name'] ?? ''));
             if ($name === '') {
                 Session::flash('error', 'Category name is required.');
             } else {

@@ -23,6 +23,11 @@ final class JsonResponse
         exit;
     }
 
+    public static function success(mixed $data = null, int $status = 200, ?array $meta = null): never
+    {
+        self::send($data, $status, $meta);
+    }
+
     public static function error(string $message, int $status = 400, ?string $code = null): never
     {
         $error = ['message' => $message];

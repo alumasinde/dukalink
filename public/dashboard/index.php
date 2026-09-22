@@ -7,6 +7,7 @@ require dirname(__DIR__, 2) . '/vendor/autoload.php';
 use App\Bootstrap\App;
 use App\Database\Database;
 use App\Modules\Products\ProductRepository;
+use App\Modules\Subscriptions\EntitlementService;
 use App\Modules\Categories\CategoryRepository;
 use App\Modules\Shops\ShopRepository;
 use App\Modules\Orders\OrderRepository;
@@ -28,6 +29,9 @@ $orderRepo = new OrderRepository($db);
 $orderCounts = $orderRepo->countByStatus($shopId);
 $customerCount = count((new CustomerRepository($db))->allForShop($shopId));
 $orderCount = array_sum($orderCounts);
+$subscriptionEntitlements = new EntitlementService($db);
+$subscription = $subscriptionEntitlements->subscription($shopId);
+$usageSummary = $subscriptionEntitlements->usageSummary($shopId);
 
 if (!$shop) {
     http_response_code(404);
@@ -43,6 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $action = $_POST['action'] ?? '';
     if ($action === 'publish') {
+        if (!$subscriptionEntitlements->isUsable($shopId)) {
+            \App\Support\Session::flash('error', 'Your subscription is not active. Renew or choose an active plan before publishing your shop.');
+            header('Location: /subscription');
+            exit;
+        }
+
         $hasActiveProduct = (new ProductRepository($db))->allForShop($shopId, 'active') !== [];
         $hasWhatsApp = trim((string)($shop['whatsapp_number'] ?? '')) !== '';
         $hasShopDetails = trim((string)($shop['name'] ?? '')) !== ''
@@ -162,6 +172,31 @@ ob_start();
                     <p class="small mb-0">Customers can browse your products, but they cannot complete checkout until you enable M-Pesa or cash on delivery.</p>
                 </div>
                 <a href="/settings/payments" class="btn btn-primary">Enable payments</a>
+            </section>
+        <?php endif; ?>
+
+        <?php if ($subscription): ?>
+            <section class="panel subscription-dashboard-card mt-3">
+                <div class="p-4">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+                        <div>
+                            <div class="small text-uppercase fw-bold text-secondary">Subscription</div>
+                            <h2 class="h5 fw-bold mt-1 mb-1"><?= e($subscription['plan_name']) ?> plan <span class="status-badge status-<?= e($subscription['status']) ?> ms-1"><?= e(ucwords(str_replace('_',' ',$subscription['status']))) ?></span></h2>
+                            <p class="small text-secondary mb-0"><?php if ($subscription['status']==='trial'): ?>Trial ends <?= e(date('M j, Y', strtotime($subscription['trial_ends_at']))) ?><?php elseif (!empty($subscription['current_period_end'])): ?>Current period ends <?= e(date('M j, Y', strtotime($subscription['current_period_end']))) ?><?php else: ?>Manage your plan and usage here.<?php endif; ?></p>
+                        </div>
+                        <a href="/subscription" class="btn btn-outline-dark align-self-start">Manage subscription</a>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <?php foreach ($usageSummary as $item): ?>
+                            <div class="col-md-4">
+                                <div class="subscription-usage-mini">
+                                    <div class="d-flex justify-content-between small fw-semibold"><span><?= e($item['label']) ?></span><span><?= $item['unlimited'] ? 'Unlimited' : e((string)$item['usage'].' / '.(string)$item['limit']) ?></span></div>
+                                    <?php if (!$item['unlimited']): ?><div class="progress mt-2"><div class="progress-bar" style="width: <?= $item['limit'] > 0 ? min(100, round(($item['usage']/$item['limit'])*100)) : 100 ?>%"></div></div><?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
             </section>
         <?php endif; ?>
 

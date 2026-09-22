@@ -1,5 +1,9 @@
 RewriteEngine On
 
+# Platform administration. The dispatcher validates the requested link against ADMIN_LINK from .env.
+# This keeps /admin/login invalid even if someone guesses the old path.
+RewriteRule ^([a-zA-Z0-9_-]+)/(login|logout|dashboard|plans)/?$ platform/dispatcher.php?admin_link=$1&action=$2 [L,QSA]
+
 # Dynamic SEO endpoints
 RewriteRule ^robots\.txt$ seo/robots.php [L,QSA]
 RewriteRule ^sitemap\.xml$ seo/sitemap.php [L,QSA]

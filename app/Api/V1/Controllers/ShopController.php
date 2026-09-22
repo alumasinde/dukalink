@@ -9,6 +9,7 @@ use App\Api\V1\Support\Request;
 use App\Database\Database;
 use App\Modules\Shops\ShopRepository;
 use App\Modules\Notifications\NotificationTemplateRepository;
+use App\Modules\Subscriptions\EntitlementService;
 use function App\Support\slugify;
 use function App\Support\reserved_shop_slug;
 
@@ -128,6 +129,9 @@ final class ShopController
 
         $db = Database::connection();
         $shopId = (int)$shop['id'];
+        if (!(new EntitlementService($db))->isUsable($shopId)) {
+            JsonResponse::error('Your subscription is not active. Renew or choose an active plan before publishing your shop.', 402, 'subscription_inactive');
+        }
         $productStmt = $db->prepare('SELECT COUNT(*) FROM products WHERE shop_id = :shop_id AND status = "active"');
         $productStmt->execute(['shop_id' => $shopId]);
         $hasProduct = (int)$productStmt->fetchColumn() > 0;

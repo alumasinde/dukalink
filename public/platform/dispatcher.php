@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+require dirname(__DIR__, 2) . '/vendor/autoload.php';
+use App\Bootstrap\App;
+use App\Support\PlatformAuth;
+new App();
+$requested = strtolower(trim((string)($_GET['admin_link'] ?? ''), '/'));
+$configured = trim(PlatformAuth::basePath(), '/');
+if ($requested === '' || !hash_equals($configured, $requested)) {
+    http_response_code(404);
+    require dirname(__DIR__) . '/404.php';
+    exit;
+}
+$action = (string)($_GET['action'] ?? 'login');
+$files = ['login'=>'login.php','logout'=>'logout.php','dashboard'=>'index.php','plans'=>'plans.php'];
+if (!isset($files[$action])) { http_response_code(404); require dirname(__DIR__) . '/404.php'; exit; }
+require __DIR__ . '/' . $files[$action];

@@ -8,6 +8,7 @@ use App\Api\V1\Controllers\ShopController;
 use App\Api\V1\Controllers\CatalogController;
 use App\Api\V1\Controllers\PublicStoreController;
 use App\Api\V1\Controllers\OrderController;
+use App\Api\V1\Controllers\SubscriptionController;
 use App\Api\V1\Support\JsonResponse;
 use App\Api\V1\Support\Request;
 
@@ -84,6 +85,10 @@ final class Router
                 OrderController::track();
             case $route === 'payments/mpesa/callback' && $method === 'POST':
                 OrderController::mpesaCallback();
+            case $route === 'subscriptions/mpesa/callback' && $method === 'POST':
+                SubscriptionController::callback();
+            case $route === 'subscriptions/payment/status' && $method === 'GET':
+                SubscriptionController::status();
             case $route === 'customers' && $method === 'GET':
                 OrderController::customers();
             case preg_match('#^customers/(\d+)$#', $route, $m) === 1 && $method === 'GET':

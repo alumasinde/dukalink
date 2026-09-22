@@ -9,6 +9,7 @@ use App\Database\Database;
 use App\Modules\Shops\ShopRepository;
 use App\Modules\Categories\CategoryRepository;
 use App\Modules\Products\ProductRepository;
+use App\Modules\Subscriptions\EntitlementService;
 use App\Support\Csrf;
 use App\Support\Session;
 use App\Support\Auth;
@@ -34,6 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($name === '' || $price < 0) {
             Session::flash('error', 'Product name and a valid price are required.');
         } else {
+            try {
+                (new EntitlementService($db))->assertCanCreate($shopId, 'products.max', 'products');
+            } catch (\Throwable $limitError) {
+                Session::flash('error', $limitError->getMessage());
+                header('Location: /products');
+                exit;
+            }
             $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $name), '-'));
             $slug = $slug ?: 'product-' . time();
 

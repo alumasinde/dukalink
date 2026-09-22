@@ -321,3 +321,45 @@ API v1 also exposes authenticated `POST /api/v1/shop/publish` and `POST /api/v1/
 - Alternative: Order on WhatsApp, using the same Dukame order number.
 - Customer details use First Name, Last Name, Phone, optional Email, delivery location and notes.
 - Orders are created server-side from trusted product prices; browser cart prices are never trusted.
+
+## Subscription system
+
+Dukame subscriptions are database-driven. Plan names, prices, trial days, public visibility, featured status and feature limits are stored in `subscription_plans` and `subscription_plan_features` rather than hardcoded in product logic or the landing page.
+
+Run the normal migration command after updating the project:
+
+```bash
+php database/migrate.php
+```
+
+The subscription migration creates default Basic, Growth and Business plans and gives existing shops a Basic trial if they do not already have a subscription. New shops receive the configured Basic trial during onboarding.
+
+### Admin access
+
+Subscription plan management is restricted to users whose `users.role` is `admin`. Registration never accepts or assigns this role. For the first administrator, promote an existing trusted account directly in MySQL:
+
+```sql
+UPDATE users SET role = 'admin' WHERE phone = '2547XXXXXXXX';
+```
+
+Then log in normally and open `/admin/plans`.
+
+Do not expose this SQL in the public application or accept a role value from merchant registration/API requests.
+
+### Entitlement enforcement
+
+Product and category creation is enforced server-side through `App\Modules\Subscriptions\EntitlementService`. UI limits are informational only; API requests receive a `subscription_limit` error when a merchant reaches a configured limit. Existing products are never deleted automatically after a downgrade or expiry.
+
+### Subscription payment foundation
+
+`subscription_payments` stores billing payment records separately from customer order payments. Actual subscription collection/renewal can be connected to M-Pesa without mixing subscription payments with order payments.
+
+
+## Subscription roles and billing
+
+- A normal registration creates a `merchant` user during shop onboarding. Merchants manage their own shop subscription.
+- `admin` is reserved for the Dukame platform administrator. It is never assigned through public registration and cannot be used as a merchant session.
+- Subscription plan configuration is controlled by platform admins; merchant plan changes require a verified payment.
+- Subscription M-Pesa credentials are platform-level environment variables (`SUBSCRIPTION_MPESA_*`) and are separate from merchant shop M-Pesa credentials.
+- A subscription plan changes only after the M-Pesa callback reports `ResultCode = 0`.
+- Never put platform subscription credentials in a public repository or merchant-editable settings.

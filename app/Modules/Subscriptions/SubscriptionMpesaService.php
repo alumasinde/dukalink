@@ -1,0 +1,40 @@
+<?php
+declare(strict_types=1);
+namespace App\Modules\Subscriptions;
+use PDO;
+use RuntimeException;
+use function App\Support\normalize_phone;
+final class SubscriptionMpesaService {
+ public function __construct(private PDO $db) {}
+ public function enabled(): bool { return filter_var($_ENV['SUBSCRIPTION_MPESA_ENABLED']??false,FILTER_VALIDATE_BOOL)&&$this->configured(); }
+ private function configured(): bool { foreach(['SUBSCRIPTION_MPESA_SHORTCODE','SUBSCRIPTION_MPESA_CONSUMER_KEY','SUBSCRIPTION_MPESA_CONSUMER_SECRET','SUBSCRIPTION_MPESA_PASSKEY'] as $k) if(trim((string)($_ENV[$k]??''))==='') return false; return true; }
+ public function initiate(int $shopId,int $userId,int $planId,string $interval,string $phone): array {
+  if(!$this->enabled()) throw new RuntimeException('Subscription M-Pesa payments are not enabled yet.');
+  $interval=$interval==='annual'?'annual':'monthly';
+  $q=$this->db->prepare('SELECT s.id subscription_id,p.id target_plan_id,p.name plan_name,p.monthly_price,p.annual_price,p.currency,p.is_active,p.is_public FROM subscriptions s INNER JOIN shops sh ON sh.id=s.shop_id AND sh.owner_id=:user_id INNER JOIN subscription_plans p ON p.id=:plan_id WHERE s.shop_id=:shop_id LIMIT 1');
+  $q->execute(['plan_id'=>$planId,'user_id'=>$userId,'shop_id'=>$shopId]); $row=$q->fetch();
+  if(!$row||!(int)$row['is_active']||!(int)$row['is_public']) throw new RuntimeException('That subscription plan is not available.');
+  $amount=$interval==='annual'?(float)$row['annual_price']:(float)$row['monthly_price'];
+  if($amount<=0) throw new RuntimeException('This plan does not require an M-Pesa payment.');
+  if((string)$row['currency']!=='KES') throw new RuntimeException('Subscription M-Pesa billing is currently available for KES plans only.');
+  $phone=normalize_phone($phone); if(!preg_match('/^254\d{9}$/',$phone)) throw new RuntimeException('Enter a valid Kenyan M-Pesa phone number.');
+  $pending=$this->db->prepare("SELECT id FROM subscription_payments WHERE subscription_id=:sid AND status='pending' AND created_at>DATE_SUB(CURRENT_TIMESTAMP,INTERVAL 15 MINUTE) LIMIT 1"); $pending->execute(['sid'=>$row['subscription_id']]); if($pending->fetch()) throw new RuntimeException('An M-Pesa subscription payment is already awaiting confirmation.');
+  $base=(($_ENV['SUBSCRIPTION_MPESA_ENVIRONMENT']??'sandbox')==='production')?'https://api.safaricom.co.ke':'https://sandbox.safaricom.co.ke';
+  $token=$this->requestJson($base.'/oauth/v1/generate?grant_type=client_credentials','Basic '.base64_encode((string)$_ENV['SUBSCRIPTION_MPESA_CONSUMER_KEY'].':'.(string)$_ENV['SUBSCRIPTION_MPESA_CONSUMER_SECRET']),[]);
+  if(empty($token['access_token'])) throw new RuntimeException('Could not authenticate with M-Pesa.');
+  $shortcode=trim((string)$_ENV['SUBSCRIPTION_MPESA_SHORTCODE']); $timestamp=date('YmdHis'); $password=base64_encode($shortcode.(string)$_ENV['SUBSCRIPTION_MPESA_PASSKEY'].$timestamp); $callback=rtrim((string)($_ENV['APP_URL']??''),'/').'/api/v1/subscriptions/mpesa/callback';
+  if(!preg_match('#^https://#i',$callback)) throw new RuntimeException('APP_URL must be a public HTTPS URL before subscription M-Pesa billing can be used.');
+  $reference='DUKAME-S'.(int)$row['subscription_id'].'-'.bin2hex(random_bytes(4)); $type=trim((string)($_ENV['SUBSCRIPTION_MPESA_TRANSACTION_TYPE']??'CustomerPayBillOnline'))?:'CustomerPayBillOnline'; $partyB=trim((string)($_ENV['SUBSCRIPTION_MPESA_PARTY_B']??''))?:$shortcode;
+  $body=['BusinessShortCode'=>$shortcode,'Password'=>$password,'Timestamp'=>$timestamp,'TransactionType'=>$type,'Amount'=>(int)round($amount),'PartyA'=>$phone,'PartyB'=>$partyB,'PhoneNumber'=>$phone,'CallBackURL'=>$callback,'AccountReference'=>$reference,'TransactionDesc'=>'Dukame '.$row['plan_name'].' subscription'];
+  $response=$this->requestJson($base.'/mpesa/stkpush/v1/processrequest','Bearer '.$token['access_token'],$body); $checkout=(string)($response['CheckoutRequestID']??''); if($checkout==='') throw new RuntimeException((string)($response['errorMessage']??$response['ResponseDescription']??'M-Pesa STK request failed.'));
+  $ins=$this->db->prepare('INSERT INTO subscription_payments (subscription_id,target_plan_id,shop_id,provider,provider_reference,amount,currency,billing_interval,status,phone,metadata) VALUES (:sid,:pid,:shop,:provider,:ref,:amount,:currency,:interval,"pending",:phone,:metadata)');
+  $ins->execute(['sid'=>$row['subscription_id'],'pid'=>$row['target_plan_id'],'shop'=>$shopId,'provider'=>'mpesa','ref'=>$checkout,'amount'=>$amount,'currency'=>$row['currency'],'interval'=>$interval,'phone'=>$phone,'metadata'=>json_encode(['account_reference'=>$reference,'response_description'=>$response['ResponseDescription']??null],JSON_UNESCAPED_UNICODE)]);
+  return ['payment_id'=>(int)$this->db->lastInsertId(),'checkout_request_id'=>$checkout,'response_description'=>$response['ResponseDescription']??'STK Push sent.'];
+ }
+ public function statusForMerchant(int $paymentId,int $shopId):?array { $s=$this->db->prepare('SELECT id,status,amount,currency,billing_interval,result_code,result_description,mpesa_receipt,created_at,paid_at FROM subscription_payments WHERE id=:id AND shop_id=:shop_id LIMIT 1'); $s->execute(['id'=>$paymentId,'shop_id'=>$shopId]); return $s->fetch()?:null; }
+ public function handleCallback(array $payload):void {
+  $cb=$payload['Body']['stkCallback']??null; if(!is_array($cb)) throw new RuntimeException('Invalid M-Pesa subscription callback.'); $checkout=(string)($cb['CheckoutRequestID']??''); if($checkout==='')return; $code=(string)($cb['ResultCode']??''); $desc=(string)($cb['ResultDesc']??''); $receipt=null; foreach(($cb['CallbackMetadata']['Item']??[]) as $item) if(($item['Name']??'')==='MpesaReceiptNumber'){ $receipt=(string)($item['Value']??''); break; }
+  $this->db->beginTransaction(); try { $s=$this->db->prepare('SELECT * FROM subscription_payments WHERE provider="mpesa" AND provider_reference=:ref FOR UPDATE'); $s->execute(['ref'=>$checkout]); $p=$s->fetch(); if(!$p){$this->db->commit();return;} if($p['status']==='paid'){$this->db->commit();return;} $status=$code==='0'?'paid':'failed'; $u=$this->db->prepare('UPDATE subscription_payments SET status=:status,result_code=:code,result_description=:desc,mpesa_receipt=:receipt,raw_callback=:raw,paid_at=:paid_at,updated_at=CURRENT_TIMESTAMP WHERE id=:id'); $u->execute(['status'=>$status,'code'=>$code,'desc'=>$desc,'receipt'=>$receipt,'raw'=>json_encode($payload,JSON_UNESCAPED_UNICODE),'paid_at'=>$status==='paid'?date('Y-m-d H:i:s'):null,'id'=>$p['id']]); if($status==='paid'){ $months=$p['billing_interval']==='annual'?12:1; $sub=$this->db->prepare('UPDATE subscriptions SET plan_id=:plan_id,status="active",billing_interval=:interval,current_period_start=CURRENT_TIMESTAMP,current_period_end=DATE_ADD(CURRENT_TIMESTAMP, INTERVAL '.$months.' MONTH),grace_ends_at=DATE_ADD(DATE_ADD(CURRENT_TIMESTAMP, INTERVAL '.$months.' MONTH), INTERVAL 3 DAY),trial_ends_at=NULL,cancelled_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=:id'); $sub->execute(['plan_id'=>$p['target_plan_id'],'interval'=>$p['billing_interval'],'id'=>$p['subscription_id']]); } $this->db->commit(); } catch(\Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
+ }
+ private function requestJson(string $url,string $auth,array $body):array { $ch=curl_init($url); $headers=['Authorization: '.$auth,'Accept: application/json']; $opts=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>$headers,CURLOPT_CONNECTTIMEOUT=>7,CURLOPT_TIMEOUT=>20]; if($body){$headers[]='Content-Type: application/json';$opts[CURLOPT_HTTPHEADER]=$headers;$opts[CURLOPT_POST]=true;$opts[CURLOPT_POSTFIELDS]=json_encode($body);} curl_setopt_array($ch,$opts); $raw=curl_exec($ch); $code=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch); if($raw===false)throw new RuntimeException('M-Pesa request failed.'); $json=json_decode($raw,true); if(!is_array($json))throw new RuntimeException('M-Pesa returned an invalid response.'); if($code<200||$code>=300)throw new RuntimeException((string)($json['errorMessage']??$json['ResponseDescription']??'M-Pesa request failed.')); return $json; }
+}

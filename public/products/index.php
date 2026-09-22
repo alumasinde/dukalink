@@ -8,6 +8,7 @@ use App\Bootstrap\App;
 use App\Database\Database;
 use App\Modules\Shops\ShopRepository;
 use App\Modules\Products\ProductRepository;
+use App\Modules\Subscriptions\EntitlementService;
 use App\Support\Session;
 use App\Support\Auth;
 use App\Support\Csrf;
@@ -20,6 +21,10 @@ $merchant = Auth::requireMerchant($db);
 $shopId = (int)$merchant['id'];
 
 $productRepo = new ProductRepository($db);
+$entitlements = new EntitlementService($db);
+$productLimit = $entitlements->limit($shopId, 'products.max');
+$productUsage = $entitlements->usage($shopId);
+$productLimitReached = $productLimit !== null && $productUsage >= $productLimit;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!Csrf::verify($_POST['_csrf'] ?? null)) {
@@ -51,7 +56,7 @@ ob_start();
                 <div class="small text-secondary">Catalogue</div>
                 <h1 class="h3 fw-bold mb-0">Products</h1>
             </div>
-            <a href="/products/create" class="btn btn-primary">+ Add product</a>
+            <a href="/products/create" class="btn btn-primary <?= $productLimitReached ? 'disabled' : '' ?>" <?= $productLimitReached ? 'aria-disabled="true" tabindex="-1"' : '' ?>>+ Add product</a>
         </div>
 
         <div class="panel">
@@ -59,7 +64,7 @@ ob_start();
             <div class="panel-heading flex-wrap">
                 <div>
                     <h2 class="h5 fw-bold mb-1">All products</h2>
-                    <p class="small text-secondary mb-0"><?= count($products) ?> products in your shop</p>
+                    <p class="small text-secondary mb-0"><?= count($products) ?> products in your shop<?php if ($productLimit !== null): ?> · <?= (int)$productUsage ?> / <?= (int)$productLimit ?> used<?php endif; ?></p>
                 </div>
                 <div class="catalogue-search">
                     <input class="form-control" type="search" placeholder="Search products..." data-product-search>

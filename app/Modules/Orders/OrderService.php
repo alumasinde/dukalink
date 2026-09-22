@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Orders;
 
 use App\Modules\Shops\ShopRepository;
+use App\Modules\Subscriptions\EntitlementService;
 use PDO;
 use function App\Support\normalize_phone;
 
@@ -85,7 +86,8 @@ final class OrderService
             $total = $subtotal + $deliveryFee;
             $orderChannel = in_array(($data['order_channel'] ?? 'web'), ['web', 'whatsapp'], true) ? $data['order_channel'] : 'web';
             $paymentMethod = (string)($data['payment_method'] ?? '');
-            $mpesaEnabled = !empty($shop['mpesa_enabled']) && !empty($shop['mpesa_credentials_configured']) && !empty($shop['mpesa_phone']) && (($shop['currency'] ?? 'KES') === 'KES');
+            $mpesaEnabled = (new EntitlementService($this->db))->enabled($shopId, 'payments.mpesa')
+                && !empty($shop['mpesa_enabled']) && !empty($shop['mpesa_credentials_configured']) && !empty($shop['mpesa_phone']) && (($shop['currency'] ?? 'KES') === 'KES');
             $codEnabled = $fulfillment === 'delivery' && !empty($shop['allow_cash_on_delivery']);
             $cashPickupEnabled = $fulfillment === 'pickup' && !empty($shop['allow_cash_on_pickup']);
             if ($paymentMethod === 'mpesa' && !$mpesaEnabled) throw new \InvalidArgumentException('M-Pesa is not enabled for this store. Please choose another payment method.');

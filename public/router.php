@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+require dirname(__DIR__) . '/vendor/autoload.php';
+new \App\Bootstrap\App();
+
 /*
  * Dukame development router.
  *
@@ -24,6 +27,23 @@ if ($path !== '/') {
 $route = trim($path, '/');
 
 if ($route === 'robots.txt') { require __DIR__ . '/seo/robots.php'; return true; }
+
+// Platform administration is intentionally namespaced by ADMIN_LINK. The legacy /admin path is not registered.
+$adminLink = trim((string)($_ENV['ADMIN_LINK'] ?? 'platform'), '/');
+$adminLink = preg_replace('/[^a-zA-Z0-9_-]/', '', $adminLink) ?: 'platform';
+$adminLink = strtolower($adminLink);
+if (preg_match('#^([a-z0-9_-]+)/(login|logout|dashboard|plans)$#i', $route, $m)) {
+    if (strtolower($m[1]) !== $adminLink) {
+        http_response_code(404);
+        require __DIR__ . '/404.php';
+        return true;
+    }
+    $_GET['admin_link'] = strtolower($m[1]);
+    $_GET['action'] = strtolower($m[2]);
+    require __DIR__ . '/platform/dispatcher.php';
+    return true;
+}
+
 if ($route === 'sitemap.xml') { require __DIR__ . '/seo/sitemap.php'; return true; }
 
 if ($route === 'api/v1' || str_starts_with($route, 'api/v1/')) {
@@ -62,6 +82,9 @@ $routes = [
     'settings/payments' => 'settings/payments.php',
     'settings/delivery' => 'settings/delivery.php',
     'settings/notifications' => 'settings/notifications.php',
+    'subscription' => 'subscription/index.php',
+    'subscription/pay' => 'subscription/pay.php',
+    'subscription/status' => 'subscription/status.php',
 
     'cart' => 'cart/index.php',
     'checkout' => 'checkout/index.php',

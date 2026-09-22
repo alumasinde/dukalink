@@ -688,3 +688,10 @@ html{scroll-behavior:smooth}body{background:var(--dk-bg);color:var(--dk-text);fo
   .store-card-quantity button { width:31px; }
   .store-card-quantity span { min-width:25px; }
 }
+
+
+/* Subscription */
+.pricing-card{position:relative;background:#fff;border:1px solid var(--dk-border);border-radius:20px;padding:28px;box-shadow:var(--dk-shadow-sm);transition:transform .2s ease,box-shadow .2s ease}.pricing-card:hover{transform:translateY(-3px);box-shadow:var(--dk-shadow)}.pricing-card-featured{border:2px solid var(--dk-primary);box-shadow:0 16px 40px color-mix(in srgb,var(--dk-primary) 12%,transparent)}.pricing-popular{position:absolute;top:16px;right:16px;padding:5px 9px;border-radius:999px;background:var(--dk-primary-soft);color:var(--dk-primary);font-size:.68rem;font-weight:800}.pricing-price{display:flex;align-items:baseline;gap:6px;margin:18px 0 5px}.pricing-price span{font-size:2rem;font-weight:850;letter-spacing:-.04em}.pricing-price small{color:var(--dk-muted)}.pricing-features{display:grid;gap:10px;margin-top:18px}.min-h-plan{min-height:42px}.subscription-usage-mini{padding:13px;border:1px solid var(--dk-border);border-radius:12px;background:#fff}.subscription-dashboard-card{border-left:4px solid var(--dk-primary)}
+
+.pricing-toggle{display:inline-flex;padding:4px;border:1px solid var(--dk-border);border-radius:12px;background:#fff;gap:4px}.pricing-toggle .btn{border-radius:9px}
+.status-trial{background:#EDE9FE;color:#6D28D9}.status-past_due{background:#FEF3C7;color:#92400E}.status-expired{background:#FEE2E2;color:#991B1B}.status-cancelled{background:#F1F5F9;color:#475569}

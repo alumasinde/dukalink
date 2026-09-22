@@ -56,8 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     try {
                         $stmt = $db->prepare(
-                            'INSERT INTO users (first_name, last_name, phone, email, password_hash)
-                             VALUES (:first_name, :last_name, :phone, :email, :password_hash)'
+                            'INSERT INTO users (first_name, last_name, phone, email, password_hash, role)
+                             VALUES (:first_name, :last_name, :phone, :email, :password_hash, \'merchant\')'
                         );
 
                         $stmt->execute([
@@ -88,6 +88,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'INSERT INTO shop_settings (shop_id) VALUES (:shop_id)'
                         );
                         $settingsStmt->execute(['shop_id' => $shopId]);
+
+                        // Every new merchant starts with the currently configured public Basic plan trial.
+                        $planStmt = $db->query(
+                            "SELECT id, trial_days FROM subscription_plans WHERE slug = 'basic' AND is_active = 1 LIMIT 1"
+                        );
+                        $basicPlan = $planStmt->fetch();
+                        if (!$basicPlan) {
+                            throw new \RuntimeException('No default subscription plan is configured.');
+                        }
+                        $trialDays = max(0, (int)$basicPlan['trial_days']);
+                        $now = new \DateTimeImmutable('now');
+                        $trialEnd = $trialDays > 0 ? $now->modify('+' . $trialDays . ' days') : $now;
+                        $subscriptionStmt = $db->prepare(
+                            "INSERT INTO subscriptions
+                             (shop_id, plan_id, status, billing_interval, starts_at, trial_ends_at, current_period_start, current_period_end, grace_ends_at)
+                             VALUES (:shop_id, :plan_id, :status, 'monthly', :starts_at, :trial_ends_at, :period_start, :period_end, :grace_ends_at)"
+                        );
+                        $subscriptionStmt->execute([
+                            'shop_id' => $shopId,
+                            'plan_id' => (int)$basicPlan['id'],
+                            'status' => $trialDays > 0 ? 'trial' : 'active',
+                            'starts_at' => $now->format('Y-m-d H:i:s'),
+                            'trial_ends_at' => $trialDays > 0 ? $trialEnd->format('Y-m-d H:i:s') : null,
+                            'period_start' => $now->format('Y-m-d H:i:s'),
+                            'period_end' => $trialEnd->format('Y-m-d H:i:s'),
+                            'grace_ends_at' => $trialEnd->modify('+3 days')->format('Y-m-d H:i:s'),
+                        ]);
 
                         $db->commit();
 

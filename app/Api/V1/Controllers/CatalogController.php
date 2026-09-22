@@ -9,6 +9,7 @@ use App\Api\V1\Support\Request;
 use App\Database\Database;
 use App\Modules\Products\ProductRepository;
 use App\Modules\Categories\CategoryRepository;
+use App\Modules\Subscriptions\EntitlementService;
 use function App\Support\slugify;
 
 final class CatalogController
@@ -38,6 +39,7 @@ final class CatalogController
 
         $repo = new ProductRepository(Database::connection());
         try {
+            (new EntitlementService(Database::connection()))->assertCanCreate((int)$shop['id'], 'products.max', 'products');
             $id = $repo->create((int)$shop['id'], [
                 'category_id' => !empty($data['category_id']) ? (int)$data['category_id'] : null,
                 'name' => $name,
@@ -53,6 +55,8 @@ final class CatalogController
                 'status' => in_array(($data['status'] ?? 'draft'), ['draft','active','archived'], true) ? $data['status'] : 'draft',
                 'featured' => !empty($data['featured']),
             ]);
+        } catch (\RuntimeException $e) {
+            JsonResponse::error($e->getMessage(), 409, 'subscription_limit');
         } catch (\PDOException $e) {
             if ((string)$e->getCode() === '23000') JsonResponse::error('A product with that slug already exists in this shop.', 409, 'duplicate_product');
             throw $e;
@@ -84,6 +88,11 @@ final class CatalogController
         $shop = ApiAuth::shopForUser((int)$user['id']);
         if (!$shop) JsonResponse::error('Shop not found.', 404, 'shop_not_found');
         $data = Request::json();
+        try {
+            (new EntitlementService(Database::connection()))->assertCanCreate((int)$shop['id'], 'categories.max', 'categories');
+        } catch (\RuntimeException $e) {
+            JsonResponse::error($e->getMessage(), 409, 'subscription_limit');
+        }
         $name = trim((string)($data['name'] ?? ''));
         $slug = slugify((string)($data['slug'] ?? $name));
         if ($name === '' || $slug === '') JsonResponse::error('Category name is required.', 422, 'validation_error');

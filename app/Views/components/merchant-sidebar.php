@@ -43,6 +43,7 @@ $merchantSection = $merchantSection ?? 'overview';
         <a class="<?= $merchantSection === 'payments' ? 'active' : '' ?>" href="/settings/payments"><span>◉</span> Payments</a>
         <a class="<?= $merchantSection === 'delivery' ? 'active' : '' ?>" href="/settings/delivery"><span>⌂</span> Delivery & Pickup</a>
         <a class="<?= $merchantSection === 'notifications' ? 'active' : '' ?>" href="/settings/notifications"><span>✉</span> SMS templates</a>
+        <a class="<?= $merchantSection === 'subscription' ? 'active' : '' ?>" href="/subscription"><span>◇</span> Subscription</a>
     </nav>
 
     <div class="sidebar-bottom">
@@ -63,7 +64,7 @@ $merchantSection = $merchantSection ?? 'overview';
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
-        <?php $mobileNav = ['overview' => ['/dashboard','▦','Overview'], 'products' => ['/products','◫','Products'], 'categories' => ['/categories','◇','Categories'], 'orders' => ['/orders','▤','Orders'], 'customers' => ['/customers','♙','Customers'], 'settings' => ['/settings/shop','⚙','Shop settings'], 'payments' => ['/settings/payments','◉','Payments'], 'delivery' => ['/settings/delivery','⌂','Delivery & Pickup'], 'notifications' => ['/settings/notifications','✉','SMS templates']]; ?>
+        <?php $mobileNav = ['overview' => ['/dashboard','▦','Overview'], 'products' => ['/products','◫','Products'], 'categories' => ['/categories','◇','Categories'], 'orders' => ['/orders','▤','Orders'], 'customers' => ['/customers','♙','Customers'], 'settings' => ['/settings/shop','⚙','Shop settings'], 'payments' => ['/settings/payments','◉','Payments'], 'delivery' => ['/settings/delivery','⌂','Delivery & Pickup'], 'notifications' => ['/settings/notifications','✉','SMS templates'], 'subscription' => ['/subscription','◇','Subscription']]; ?>
         <nav class="merchant-nav">
             <?php foreach ($mobileNav as $key => [$url,$icon,$label]): ?>
                 <a class="<?= $merchantSection === $key ? 'active' : '' ?>" href="<?= e($url) ?>"><span><?= e($icon) ?></span> <?= e($label) ?></a>

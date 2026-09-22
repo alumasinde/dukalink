@@ -10,25 +10,58 @@ use App\Database\Database;
 $app = new App();
 $db = Database::connection();
 
-$migrations = [
-    __DIR__ . '/migrations/001_create_users.sql',
-    __DIR__ . '/migrations/002_create_shops.sql',
-    __DIR__ . '/migrations/003_create_categories_products.sql',
-    __DIR__ . '/migrations/004_add_shop_branding_and_mpesa.sql',
-    __DIR__ . '/migrations/005_create_api_tokens.sql',
-    __DIR__ . '/migrations/006_create_orders_customers.sql',
-    __DIR__ . '/migrations/007_add_product_options.sql',
-    __DIR__ . '/migrations/008_order_customer_checkout_hardening.sql',
-    __DIR__ . '/migrations/009_notifications_sms.sql',
-    __DIR__ . '/migrations/010_payments.sql',
-    __DIR__ . '/migrations/011_payment_method_settings.sql',
-    __DIR__ . '/migrations/012_delivery_and_pickup.sql',
-];
+$migrationsDir = __DIR__ . '/migrations';
 
-foreach ($migrations as $file) {
-    echo "Running " . basename($file) . "...\n";
+$files = glob($migrationsDir . '/*.sql');
+
+if ($files === false) {
+    throw new RuntimeException('Unable to read migrations directory.');
+}
+
+/*
+ * Migration filenames should start with their sequence number:
+ *
+ * 001_create_users.sql
+ * 002_create_shops.sql
+ * 003_create_categories_products.sql
+ * ...
+ *
+ * Natural sorting ensures 010 comes after 009 and before 011.
+ */
+natsort($files);
+
+foreach ($files as $file) {
+    if (!is_file($file)) {
+        continue;
+    }
+
+    echo 'Running ' . basename($file) . "...\n";
+
     $sql = file_get_contents($file);
-    $db->exec($sql);
+
+    if ($sql === false) {
+        throw new RuntimeException(
+            'Unable to read migration: ' . basename($file)
+        );
+    }
+
+    $sql = trim($sql);
+
+    if ($sql === '') {
+        echo "  Skipping empty migration.\n";
+        continue;
+    }
+
+    try {
+        $db->exec($sql);
+    } catch (Throwable $e) {
+        throw new RuntimeException(
+            'Migration failed: ' . basename($file) . PHP_EOL .
+            $e->getMessage(),
+            (int) $e->getCode(),
+            $e
+        );
+    }
 }
 
 echo "Migration complete.\n";

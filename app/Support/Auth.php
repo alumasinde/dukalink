@@ -42,10 +42,10 @@ final class Auth
         }
 
         $stmt = $db->prepare(
-            'SELECT s.*, u.first_name, u.last_name, u.phone AS user_phone, u.email
+            'SELECT s.*, u.first_name, u.last_name, u.phone AS user_phone, u.email, u.role AS user_role
              FROM shops s
              INNER JOIN users u ON u.id = s.owner_id
-             WHERE s.id = :shop_id AND s.owner_id = :user_id
+             WHERE s.id = :shop_id AND s.owner_id = :user_id AND u.role = \'merchant\'
              LIMIT 1'
         );
         $stmt->execute(['shop_id' => $shopId, 'user_id' => $userId]);
@@ -59,4 +59,5 @@ final class Auth
 
         return $shop;
     }
+
 }
