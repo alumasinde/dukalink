@@ -1,0 +1,17 @@
+:root {
+    --dk-primary: #0f766e;
+    --dk-primary-dark: #115e59;
+    --dk-secondary: #f59e0b;
+
+    --dk-bg: #f8fafc;
+    --dk-surface: #ffffff;
+
+    --dk-text: #0f172a;
+    --dk-muted: #64748b;
+    --dk-border: #e2e8f0;
+
+    --dk-success: #16a34a;
+    --dk-danger: #dc2626;
+
+    --dk-radius: 14px;
+}

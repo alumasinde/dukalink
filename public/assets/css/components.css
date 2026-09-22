@@ -1,0 +1,27 @@
+.navbar-brand {
+    letter-spacing: -.02em;
+}
+
+.progress {
+    height: 7px;
+    background: #e2e8f0;
+}
+
+.progress-bar {
+    background: var(--dk-primary);
+}
+
+.alert {
+    border-radius: 12px;
+}
+
+@media (max-width: 576px) {
+    .hero-section .display-4 {
+        font-size: 2.5rem;
+    }
+
+    .auth-card,
+    .onboarding-card {
+        padding: 24px;
+    }
+}
