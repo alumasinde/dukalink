@@ -26,3 +26,11 @@ function base_url(string $path = ''): string
 
     return $base . '/' . ltrim($path, '/');
 }
+
+
+function asset_url(string $path): string
+{
+    $path = '/' . ltrim($path, '/');
+    $file = dirname(__DIR__, 2) . '/public' . $path;
+    return is_file($file) ? $path . '?v=' . filemtime($file) : $path;
+}

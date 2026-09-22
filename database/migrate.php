@@ -13,6 +13,7 @@ $db = Database::connection();
 $migrations = [
     __DIR__ . '/migrations/001_create_users.sql',
     __DIR__ . '/migrations/002_create_shops.sql',
+    __DIR__ . '/migrations/003_create_categories_products.sql',
 ];
 
 foreach ($migrations as $file) {

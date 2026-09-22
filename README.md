@@ -88,3 +88,35 @@ Views are PHP templates. There is no framework.
 - Customer accounts
 
 Those belong to later phases. The foundation is structured so they can be added without replacing the core architecture.
+
+
+## Phase 1 UI note
+
+The visual system uses configurable branding through `.env` (`APP_NAME`, `APP_TAGLINE`, `APP_PRIMARY_COLOR`, `APP_ACCENT_COLOR`). Bootstrap provides the base components, while the custom CSS is intentionally small and reusable. The sample landing content is presentation copy; merchant shops, products, carts and orders are designed to become database-driven in later phases.
+
+
+## Phase 2 — Merchant catalogue + storefront
+
+Phase 2 adds:
+
+- Merchant dashboard
+- Product management foundation
+- Categories
+- Product status (draft/active/archived)
+- Featured products
+- Pricing and compare-at pricing
+- Basic inventory fields
+- Database-driven public storefront
+- Store categories
+- Store search
+- Mobile-first product grid
+- Local browser cart foundation per shop
+- Configurable brand/UI system retained from Phase 1
+
+Run:
+
+```bash
+php database/migrate.php
+```
+
+The public storefront is intended to become the customer shopping experience. Checkout, order creation, M-Pesa STK, SMS and WhatsApp automation are deliberately reserved for the next phases.
