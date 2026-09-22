@@ -32,6 +32,16 @@ if ($route === 'robots.txt') { require __DIR__ . '/seo/robots.php'; return true;
 $adminLink = trim((string)($_ENV['ADMIN_LINK'] ?? 'platform'), '/');
 $adminLink = preg_replace('/[^a-zA-Z0-9_-]/', '', $adminLink) ?: 'platform';
 $adminLink = strtolower($adminLink);
+// Platform Admin root and actions. Only the configured ADMIN_LINK is valid.
+// Example: ADMIN_LINK=platform -> /platform and /platform/login.
+// /admin, /admin/login and other unconfigured prefixes are never registered.
+if ($route === $adminLink) {
+    $_GET['admin_link'] = $adminLink;
+    $_GET['action'] = 'dashboard';
+    require __DIR__ . '/platform/dispatcher.php';
+    return true;
+}
+
 if (preg_match('#^([a-z0-9_-]+)/(login|logout|dashboard|plans)$#i', $route, $m)) {
     if (strtolower($m[1]) !== $adminLink) {
         http_response_code(404);
