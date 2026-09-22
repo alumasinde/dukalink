@@ -90,7 +90,7 @@ $setupPercent = (int) round(($setupComplete / $setupTotal) * 100);
 
 $recentProducts = array_slice($products, 0, 5);
 
-$merchantShop = $shop ?? (new App\Modules\Shops\ShopRepository($db))->find($shopId);
+$merchantShop = $shop ?? (new ShopRepository($db))->find($shopId);
 $merchantShop = $shop;
 $merchantSection = 'overview';
 ob_start();

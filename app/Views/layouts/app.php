@@ -21,6 +21,7 @@ $themeStyle = '--dk-primary:' . e($brand['primary']) . ';--dk-accent:' . e($bran
     <style>:root{<?= $themeStyle ?>}</style>
 </head>
 <body class="<?= $merchantLayout ? 'merchant-app-body' : '' ?>">
+
 <?php if (!$merchantLayout): ?><?php require __DIR__ . '/../components/navbar.php'; ?><?php endif; ?>
 <main><?= $content ?></main>
 <?php if (!$merchantLayout): ?><footer class="site-footer"><div class="container py-4 d-flex flex-column flex-md-row justify-content-between gap-2"><span class="small text-secondary">© <?= date('Y') ?> <?= e($brand['name']) ?></span><span class="small text-secondary"><?= e($brand['tagline']) ?></span></div></footer><?php endif; ?>
