@@ -10,6 +10,7 @@ use App\Modules\Categories\CategoryRepository;
 use App\Modules\Products\ProductRepository;
 use App\Modules\Shops\ShopRepository;
 use function App\Support\e;
+use function App\Support\shop_url;
 
 new App();
 
@@ -27,6 +28,7 @@ if (!$shopId) {
 }
 
 $shop = (new ShopRepository($db))->find($shopId);
+$publicUrl = shop_url($slug);
 $products = (new ProductRepository($db))->allForShop($shopId, 'active');
 $categories = (new CategoryRepository($db))->allForShop($shopId, true);
 
@@ -41,13 +43,22 @@ ob_start();
     <header class="storefront-header">
         <div class="container py-4">
             <div class="d-flex align-items-center justify-content-between gap-3">
-                <div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="store-logo">
+                        <?php if (!empty($shop['logo_path'])): ?>
+                            <img src="<?= e($shop['logo_path']) ?>" alt="<?= e($shop['name']) ?> logo">
+                        <?php else: ?>
+                            <span><?= e(strtoupper(substr($shop['name'], 0, 1))) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div>
                     <div class="store-name"><?= e($shop['name']) ?></div>
                     <?php if ($shop['description']): ?>
                         <div class="small text-secondary mt-1"><?= e($shop['description']) ?></div>
                     <?php else: ?>
                         <div class="small text-secondary mt-1"><?= e($shop['business_type'] ?: 'Online shop') ?></div>
                     <?php endif; ?>
+                    </div>
                 </div>
 
                 <button class="store-cart-button" type="button" data-cart-button>
@@ -151,4 +162,5 @@ window.DUKAME_STORE = {
 <?php
 $content = ob_get_clean();
 $title = $shop['name'];
+
 require dirname(__DIR__, 2) . '/app/Views/layouts/app.php';

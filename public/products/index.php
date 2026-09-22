@@ -8,15 +8,15 @@ use App\Bootstrap\App;
 use App\Database\Database;
 use App\Modules\Products\ProductRepository;
 use App\Support\Session;
+use App\Support\Auth;
+use App\Support\Csrf;
 use function App\Support\e;
 
 new App();
 
-$shopId = (int) Session::get('shop_id');
-if (!$shopId) {
-    header('Location: /register');
-    exit;
-}
+$db = Database::connection();
+$merchant = Auth::requireMerchant($db);
+$shopId = (int)$merchant['id'];
 
 $products = (new ProductRepository(Database::connection()))->allForShop($shopId);
 
@@ -45,6 +45,7 @@ ob_start();
         </div>
 
         <div class="panel">
+            <?php require dirname(__DIR__, 2) . '/app/Views/components/alert.php'; ?>
             <div class="panel-heading flex-wrap">
                 <div>
                     <h2 class="h5 fw-bold mb-1">All products</h2>
@@ -85,7 +86,13 @@ ob_start();
                                                 <div class="small text-secondary text-decoration-line-through">KSh <?= number_format((float)$product['compare_at_price'], 2) ?></div>
                                             <?php endif; ?>
                                         </div>
-                                        <a href="/products/edit?id=<?= (int)$product['id'] ?>" class="btn btn-sm btn-outline-dark">Edit</a>
+                                        <div class="d-flex gap-2">
+<a href="/products/edit?id=<?= (int)$product['id'] ?>" class="btn btn-sm btn-outline-dark">Edit</a>
+<form method="post" onsubmit="return confirm('Delete this product?');">
+<?= Csrf::field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$product['id'] ?>">
+<button class="btn btn-sm btn-outline-danger">Delete</button>
+</form>
+</div>
                                     </div>
                                 </div>
                             </article>

@@ -8,6 +8,7 @@ RewriteRule ^ - [L]
 # Clean application routes.
 RewriteRule ^$ index.php [L]
 RewriteRule ^login/?$ login.php [L,QSA]
+RewriteRule ^logout/?$ logout.php [L,QSA]
 RewriteRule ^register/?$ register.php [L,QSA]
 RewriteRule ^onboarding/?$ onboarding.php [L,QSA]
 RewriteRule ^onboarding/complete/?$ onboarding-complete.php [L,QSA]
@@ -23,9 +24,13 @@ RewriteRule ^categories/?$ categories/index.php [L,QSA]
 RewriteRule ^settings/?$ settings/index.php [L,QSA]
 RewriteRule ^settings/shop/?$ settings/shop.php [L,QSA]
 
-# Customer storefront:
-# /shop/{merchant-link}
-RewriteRule ^shop/([a-zA-Z0-9][a-zA-Z0-9_-]{1,79})/?$ shop/index.php?slug=$1 [L,QSA]
+# Legacy storefront URLs redirect to the clean root-level merchant URL.
+# Example: /shop/pendeaboutique -> /pendeaboutique
+RewriteRule ^shop/([a-z0-9]+(?:-[a-z0-9]+)*)/?$ /$1 [R=301,L,NE]
+
+# Public merchant storefront: /{merchant-link}
+# Reserved application routes above are matched first.
+RewriteRule ^([a-z0-9]+(?:-[a-z0-9]+)*)/?$ shop/index.php?slug=$1 [L,QSA]
 
 # Optional short aliases for future customer pages.
 RewriteRule ^cart/?$ cart/index.php [L,QSA]

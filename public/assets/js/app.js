@@ -67,3 +67,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+document.querySelectorAll('[data-copy-text]').forEach((button) => {
+    button.addEventListener('click', async () => {
+        const text = button.getAttribute('data-copy-text') || '';
+        try {
+            const absolute = new URL(text, window.location.origin).href;
+            await navigator.clipboard.writeText(absolute);
+            const original = button.textContent;
+            button.textContent = 'Copied';
+            setTimeout(() => { button.textContent = original; }, 1400);
+        } catch (_) {
+            // Clipboard access may be unavailable on insecure local pages.
+        }
+    });
+});

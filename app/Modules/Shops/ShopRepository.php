@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Shops;
 
 use PDO;
+use function App\Support\decrypt_secret;
+use function App\Support\encrypt_secret;
 
 final class ShopRepository
 {
@@ -13,13 +15,23 @@ final class ShopRepository
     public function find(int $shopId): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT s.*, ss.currency, ss.mpesa_phone, ss.allow_cash_on_delivery
+            'SELECT s.*, ss.currency, ss.mpesa_phone, ss.allow_cash_on_delivery,
+                    ss.mpesa_environment, ss.mpesa_shortcode, ss.mpesa_consumer_key,
+                    ss.mpesa_consumer_secret, ss.mpesa_passkey
              FROM shops s
              LEFT JOIN shop_settings ss ON ss.shop_id = s.id
              WHERE s.id = :id LIMIT 1'
         );
         $stmt->execute(['id' => $shopId]);
-        return $stmt->fetch() ?: null;
+        $shop = $stmt->fetch();
+        if (!$shop) {
+            return null;
+        }
+
+        $shop['mpesa_credentials_configured'] = !empty($shop['mpesa_consumer_key']) && !empty($shop['mpesa_consumer_secret']) && !empty($shop['mpesa_passkey']);
+        unset($shop['mpesa_consumer_key'], $shop['mpesa_consumer_secret'], $shop['mpesa_passkey']);
+
+        return $shop;
     }
 
     public function update(int $shopId, array $data): void
@@ -66,6 +78,66 @@ final class ShopRepository
             'id' => $shopId,
             'slug' => $slug,
         ]);
+    }
+
+
+    public function mpesaCredentials(int $shopId): array
+    {
+        $stmt = $this->db->prepare('SELECT mpesa_environment, mpesa_shortcode, mpesa_consumer_key, mpesa_consumer_secret, mpesa_passkey FROM shop_settings WHERE shop_id = :shop_id LIMIT 1');
+        $stmt->execute(['shop_id' => $shopId]);
+        $row = $stmt->fetch() ?: [];
+
+        return [
+            'environment' => $row['mpesa_environment'] ?? 'sandbox',
+            'shortcode' => $row['mpesa_shortcode'] ?? null,
+            'consumer_key' => decrypt_secret($row['mpesa_consumer_key'] ?? null),
+            'consumer_secret' => decrypt_secret($row['mpesa_consumer_secret'] ?? null),
+            'passkey' => decrypt_secret($row['mpesa_passkey'] ?? null),
+        ];
+    }
+
+    public function updateSettings(int $shopId, array $data): void
+    {
+        $current = $this->db->prepare('SELECT mpesa_consumer_key, mpesa_consumer_secret, mpesa_passkey FROM shop_settings WHERE shop_id = :shop_id LIMIT 1');
+        $current->execute(['shop_id' => $shopId]);
+        $existing = $current->fetch() ?: [];
+
+        $consumerKey = trim((string)($data['mpesa_consumer_key'] ?? '')) !== ''
+            ? encrypt_secret($data['mpesa_consumer_key']) : ($existing['mpesa_consumer_key'] ?? null);
+        $consumerSecret = trim((string)($data['mpesa_consumer_secret'] ?? '')) !== ''
+            ? encrypt_secret($data['mpesa_consumer_secret']) : ($existing['mpesa_consumer_secret'] ?? null);
+        $passkey = trim((string)($data['mpesa_passkey'] ?? '')) !== ''
+            ? encrypt_secret($data['mpesa_passkey']) : ($existing['mpesa_passkey'] ?? null);
+
+        $stmt = $this->db->prepare(
+            'UPDATE shop_settings
+             SET currency = :currency,
+                 mpesa_phone = :mpesa_phone,
+                 mpesa_environment = :mpesa_environment,
+                 mpesa_shortcode = :mpesa_shortcode,
+                 mpesa_consumer_key = :mpesa_consumer_key,
+                 mpesa_consumer_secret = :mpesa_consumer_secret,
+                 mpesa_passkey = :mpesa_passkey,
+                 allow_cash_on_delivery = :allow_cash_on_delivery
+             WHERE shop_id = :shop_id'
+        );
+        $stmt->execute([
+            'shop_id' => $shopId,
+            'currency' => $data['currency'],
+            'mpesa_phone' => $data['mpesa_phone'] ?: null,
+            'mpesa_environment' => $data['mpesa_environment'] ?? 'sandbox',
+            'mpesa_shortcode' => $data['mpesa_shortcode'] ?: null,
+            'mpesa_consumer_key' => $consumerKey,
+            'mpesa_consumer_secret' => $consumerSecret,
+            'mpesa_passkey' => $passkey,
+            'allow_cash_on_delivery' => !empty($data['allow_cash_on_delivery']) ? 1 : 0,
+        ]);
+    }
+
+    public function updateLogo(int $shopId, ?string $logoPath): void
+    {
+        $stmt = $this->db->prepare('UPDATE shops SET logo_path = :logo_path WHERE id = :id');
+        $stmt->execute(['id' => $shopId, 'logo_path' => $logoPath]);
     }
 
     public function publish(int $shopId): void

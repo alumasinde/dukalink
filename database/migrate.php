@@ -14,6 +14,7 @@ $migrations = [
     __DIR__ . '/migrations/001_create_users.sql',
     __DIR__ . '/migrations/002_create_shops.sql',
     __DIR__ . '/migrations/003_create_categories_products.sql',
+    __DIR__ . '/migrations/004_add_shop_branding_and_mpesa.sql',
 ];
 
 foreach ($migrations as $file) {

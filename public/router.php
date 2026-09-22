@@ -24,6 +24,7 @@ if ($path !== '') {
 $routes = [
     '' => 'index.php',
     'login' => 'login.php',
+    'logout' => 'logout.php',
     'register' => 'register.php',
     'onboarding' => 'onboarding.php',
     'onboarding/complete' => 'onboarding-complete.php',
@@ -47,7 +48,12 @@ if (isset($routes[$path])) {
     return true;
 }
 
-if (preg_match('#^shop/([a-zA-Z0-9][a-zA-Z0-9_-]{1,79})$#', $path, $m)) {
+if (preg_match('#^shop/([a-z0-9]+(?:-[a-z0-9]+)*)$#', $path, $m)) {
+    header('Location: /' . $m[1], true, 301);
+    return true;
+}
+
+if (preg_match('#^([a-z0-9]+(?:-[a-z0-9]+)*)$#', $path, $m)) {
     $_GET['slug'] = $m[1];
     require __DIR__ . '/shop/index.php';
     return true;

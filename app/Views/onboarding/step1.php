@@ -17,7 +17,7 @@
 
         <?php require __DIR__ . '/../components/alert.php'; ?>
 
-        <form method="post" action="/onboarding.php">
+        <form method="post" action="/onboarding">
             <?= \App\Support\Csrf::field() ?>
             <input type="hidden" name="step" value="1">
 
@@ -35,7 +35,7 @@
             <div class="mb-3">
                 <label class="form-label">Your shop link</label>
                 <div class="input-group input-group-lg">
-                    <span class="input-group-text bg-light border-end-0">dukame.app/shop/</span>
+                    <span class="input-group-text bg-light border-end-0">dukame.app/</span>
                     <input
                         type="text"
                         name="shop_slug"

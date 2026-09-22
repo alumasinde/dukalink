@@ -135,7 +135,7 @@ The application uses clean URLs:
 - `/products/edit?id=123`
 - `/categories`
 - `/settings/shop`
-- `/shop/{custom-shop-link}`
+- `/{custom-shop-link}`
 
 For local development, use:
 
@@ -151,4 +151,18 @@ A merchant can choose a custom public link during onboarding and later change it
 
 `/settings/shop`
 
-The slug is normalized and checked for uniqueness before it is saved.
+The slug is normalized, checked against reserved application routes, and checked for uniqueness before it is saved. Legacy `/shop/{slug}` links redirect to the shorter public URL.
+
+
+## Merchant MVP
+The merchant flow is now wired end-to-end: register, shop onboarding, login/logout, dashboard, categories, products (create/edit/delete), shop settings, payment defaults, and custom shop links. Use clean URLs such as `/login`, `/dashboard`, `/products`, `/categories`, and `/settings/shop`.
+
+Product images support JPG, PNG and WebP up to 5MB and are stored under `public/uploads/products` for the MVP.
+
+
+### Merchant settings
+Merchants can upload a store logo and configure currency, M-Pesa phone, Cash on Delivery, and Daraja STK Push credentials from `/settings/shop`. Set a strong `APP_KEY` in `.env`; sensitive Daraja credentials are encrypted at rest.
+
+
+### Merchant dashboard
+The dashboard is intentionally lightweight: it shows shop status, catalogue counts, recent products, the public shop link, and a compact setup checklist. Orders and customers will appear when those modules are implemented.

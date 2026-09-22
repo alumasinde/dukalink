@@ -7,10 +7,12 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use App\Bootstrap\App;
 use App\Database\Database;
 use App\Modules\Shops\ShopRepository;
+use App\Support\Auth;
 use App\Support\Csrf;
 use App\Support\Session;
 use App\Support\Validator;
 use function App\Support\slugify;
+use function App\Support\reserved_shop_slug;
 
 new App();
 
@@ -45,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Session::flash('error', 'Your shop link is too long.');
                 } elseif (!preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $slug)) {
                     Session::flash('error', 'Use letters, numbers and single hyphens only.');
+                } elseif (reserved_shop_slug($slug)) {
+                    Session::flash('error', 'That shop link is reserved. Please choose another one.');
                 } elseif ($shops->slugExists($slug)) {
                     Session::flash('error', 'That shop link is already taken. Try another one.');
                 } else {
@@ -88,10 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $db->commit();
 
                         Session::forget('_onboarding_user');
-                        Session::put('user_id', $userId);
-                        Session::put('shop_id', $shopId);
-                        Session::put('shop_slug', $slug);
-                        Session::regenerate();
+                        Auth::login($userId, $shopId, $slug);
 
                         Session::flash('success', 'Your shop is live. Start adding products.');
                         header('Location: /onboarding/complete');

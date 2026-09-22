@@ -10,15 +10,15 @@ use App\Modules\Categories\CategoryRepository;
 use App\Modules\Products\ProductRepository;
 use App\Support\Csrf;
 use App\Support\Session;
+use App\Support\Auth;
 use function App\Support\e;
+use function App\Support\store_product_image;
 
 new App();
 
-$shopId = (int) Session::get('shop_id');
-if (!$shopId) {
-    header('Location: /register');
-    exit;
-}
+$db = Database::connection();
+$merchant = Auth::requireMerchant($db);
+$shopId = (int)$merchant['id'];
 
 $db = Database::connection();
 $categories = (new CategoryRepository($db))->allForShop($shopId);
@@ -37,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $slug = $slug ?: 'product-' . time();
 
             try {
+                $imagePath = store_product_image($_FILES['image'] ?? [], $shopId);
+
                 (new ProductRepository($db))->create($shopId, [
                     'category_id' => $_POST['category_id'] ?? null,
                     'name' => $name,
@@ -47,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'compare_at_price' => $_POST['compare_at_price'] ?? null,
                     'stock_quantity' => (int)($_POST['stock_quantity'] ?? 0),
                     'track_inventory' => isset($_POST['track_inventory']),
-                    'image_path' => null,
+                    'image_path' => $imagePath,
                     'status' => $_POST['status'] ?? 'draft',
                     'featured' => isset($_POST['featured']),
                 ]);
@@ -82,7 +84,7 @@ ob_start();
             </div>
         </div>
 
-        <form method="post" class="row g-4">
+        <form method="post" enctype="multipart/form-data" class="row g-4">
             <?= Csrf::field() ?>
             <div class="col-lg-8">
                 <section class="panel p-4">
@@ -132,11 +134,9 @@ ob_start();
             <div class="col-lg-4">
                 <section class="panel p-4">
                     <h2 class="h6 fw-bold mb-3">Product image</h2>
-                    <div class="image-upload-placeholder">
-                        <div class="fs-2">＋</div>
-                        <div class="fw-semibold">Image upload</div>
-                        <div class="small text-secondary">Image storage will be enabled with the storefront phase.</div>
-                    </div>
+                    <label class="form-label fw-semibold">Product image</label>
+                    <input class="form-control" type="file" name="image" accept="image/jpeg,image/png,image/webp">
+                    <div class="form-text">JPG, PNG or WebP · max 5MB.</div>
                 </section>
 
                 <section class="panel p-4 mt-4">

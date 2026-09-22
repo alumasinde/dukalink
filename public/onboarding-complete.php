@@ -33,7 +33,7 @@ ob_start();
 
         <div class="shop-link-box my-4">
             <div class="small text-secondary mb-1">Your shop link</div>
-            <strong>/shop/<?= e($shopSlug) ?></strong>
+            <strong>dukame.app/<?= e($shopSlug) ?></strong>
         </div>
 
         <a href="/dashboard" class="btn btn-primary btn-lg w-100">

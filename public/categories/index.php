@@ -9,15 +9,14 @@ use App\Database\Database;
 use App\Modules\Categories\CategoryRepository;
 use App\Support\Csrf;
 use App\Support\Session;
+use App\Support\Auth;
 use function App\Support\e;
 
 new App();
 
-$shopId = (int) Session::get('shop_id');
-if (!$shopId) {
-    header('Location: /register');
-    exit;
-}
+$db = Database::connection();
+$merchant = Auth::requireMerchant($db);
+$shopId = (int)$merchant['id'];
 
 $db = Database::connection();
 $repo = new CategoryRepository($db);
@@ -39,6 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch (\Throwable $e) {
                     Session::flash('error', 'Could not create this category.');
                 }
+            }
+        } elseif ($action === 'edit') {
+            $id = (int)($_POST['id'] ?? 0);
+            $name = trim((string)($_POST['name'] ?? ''));
+            if ($name === '') {
+                Session::flash('error', 'Category name is required.');
+            } elseif (!$repo->findForShop($id, $shopId)) {
+                Session::flash('error', 'Category not found.');
+            } else {
+                $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', $name), '-')) ?: 'category';
+                $repo->update($id, $shopId, $name, $slug . '-' . substr(bin2hex(random_bytes(2)), 0, 4));
+                Session::flash('success', 'Category updated.');
             }
         } elseif ($action === 'delete') {
             $repo->delete((int)$_POST['id'], $shopId);
@@ -109,8 +120,13 @@ ob_start();
                             <?php foreach ($categories as $category): ?>
                                 <div class="list-group-item px-4 py-3 d-flex justify-content-between align-items-center">
                                     <div>
-                                        <div class="fw-semibold"><?= e($category['name']) ?></div>
-                                        <div class="small text-secondary"><?= e($category['slug']) ?></div>
+                                        <form method="post" class="d-flex gap-2 align-items-center">
+                                        <?= Csrf::field() ?>
+                                        <input type="hidden" name="action" value="edit">
+                                        <input type="hidden" name="id" value="<?= (int)$category['id'] ?>">
+                                        <input class="form-control form-control-sm" style="max-width:220px" name="name" value="<?= e($category['name']) ?>" required>
+                                        <button class="btn btn-sm btn-outline-dark">Save</button>
+                                    </form>
                                     </div>
                                     <form method="post" onsubmit="return confirm('Delete this category? Products will become uncategorized.');">
                                         <?= Csrf::field() ?>

@@ -46,6 +46,16 @@ final class CategoryRepository
         return $stmt->fetch() ?: null;
     }
 
+
+    public function update(int $id, int $shopId, string $name, string $slug): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE categories SET name = :name, slug = :slug
+             WHERE id = :id AND shop_id = :shop_id'
+        );
+        $stmt->execute(['id' => $id, 'shop_id' => $shopId, 'name' => $name, 'slug' => $slug]);
+    }
+
     public function delete(int $id, int $shopId): void
     {
         $stmt = $this->db->prepare(
