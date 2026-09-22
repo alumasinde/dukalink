@@ -120,3 +120,35 @@ php database/migrate.php
 ```
 
 The public storefront is intended to become the customer shopping experience. Checkout, order creation, M-Pesa STK, SMS and WhatsApp automation are deliberately reserved for the next phases.
+
+
+## Clean URLs
+
+The application uses clean URLs:
+
+- `/login`
+- `/register`
+- `/onboarding`
+- `/dashboard`
+- `/products`
+- `/products/create`
+- `/products/edit?id=123`
+- `/categories`
+- `/settings/shop`
+- `/shop/{custom-shop-link}`
+
+For local development, use:
+
+```bash
+php -S localhost:8000 -t public public/router.php
+```
+
+For XAMPP/Apache, `public/.htaccess` provides the same routing.
+
+## Merchant shop links
+
+A merchant can choose a custom public link during onboarding and later change it under:
+
+`/settings/shop`
+
+The slug is normalized and checked for uniqueness before it is saved.

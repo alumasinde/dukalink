@@ -9,7 +9,7 @@
 
         <?php require __DIR__ . '/../components/alert.php'; ?>
 
-        <form method="post" action="/login.php">
+        <form method="post" action="/login">
             <?= \App\Support\Csrf::field() ?>
 
             <div class="mb-3">
@@ -27,7 +27,7 @@
 
         <p class="text-center text-secondary small mt-4 mb-0">
             New to Dukame?
-            <a href="/register.php">Create your shop</a>
+            <a href="/register">Create your shop</a>
         </p>
     </div>
 </div>

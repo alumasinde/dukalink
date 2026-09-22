@@ -11,7 +11,7 @@ use function App\Support\e;
 new App();
 
 if (!Session::get('shop_id')) {
-    header('Location: /register.php');
+    header('Location: /register');
     exit;
 }
 
@@ -33,10 +33,10 @@ ob_start();
 
         <div class="shop-link-box my-4">
             <div class="small text-secondary mb-1">Your shop link</div>
-            <strong>dukame.app/<?= e($shopSlug) ?></strong>
+            <strong>/shop/<?= e($shopSlug) ?></strong>
         </div>
 
-        <a href="/" class="btn btn-primary btn-lg w-100">
+        <a href="/dashboard" class="btn btn-primary btn-lg w-100">
             Continue to dashboard
         </a>
 

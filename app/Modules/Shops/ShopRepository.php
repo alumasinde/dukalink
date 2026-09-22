@@ -37,4 +37,44 @@ final class ShopRepository
             'phone' => $data['phone'] ?: null,
         ]);
     }
+
+    public function slugExists(string $slug, ?int $exceptShopId = null): bool
+    {
+        $sql = 'SELECT id FROM shops WHERE slug = :slug';
+        $params = ['slug' => $slug];
+
+        if ($exceptShopId !== null) {
+            $sql .= ' AND id <> :except_id';
+            $params['except_id'] = $exceptShopId;
+        }
+
+        $sql .= ' LIMIT 1';
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        return (bool) $stmt->fetchColumn();
+    }
+
+    public function updateSlug(int $shopId, string $slug): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE shops SET slug = :slug WHERE id = :id'
+        );
+
+        $stmt->execute([
+            'id' => $shopId,
+            'slug' => $slug,
+        ]);
+    }
+
+    public function publish(int $shopId): void
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE shops SET status = 'active' WHERE id = :id"
+        );
+
+        $stmt->execute(['id' => $shopId]);
+    }
+
 }

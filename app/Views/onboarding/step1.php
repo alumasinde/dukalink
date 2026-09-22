@@ -32,6 +32,23 @@
                 >
             </div>
 
+            <div class="mb-3">
+                <label class="form-label">Your shop link</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text bg-light border-end-0">dukame.app/shop/</span>
+                    <input
+                        type="text"
+                        name="shop_slug"
+                        class="form-control border-start-0"
+                        placeholder="pendeaboutique"
+                        pattern="[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*"
+                        minlength="3"
+                        maxlength="80"
+                    >
+                </div>
+                <div class="form-text">Use letters, numbers and hyphens. You can change this later.</div>
+            </div>
+
             <div class="mb-4">
                 <label class="form-label">What do you sell?</label>
                 <select name="business_type" class="form-select form-select-lg" required>

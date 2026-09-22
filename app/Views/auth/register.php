@@ -9,7 +9,7 @@
 
         <?php require __DIR__ . '/../components/alert.php'; ?>
 
-        <form method="post" action="/register.php">
+        <form method="post" action="/register">
             <?= \App\Support\Csrf::field() ?>
 
             <div class="row g-3">
@@ -46,7 +46,7 @@
 
         <p class="text-center text-secondary small mt-4 mb-0">
             Already have an account?
-            <a href="/login.php">Log in</a>
+            <a href="/login">Log in</a>
         </p>
     </div>
 </div>

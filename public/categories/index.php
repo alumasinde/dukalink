@@ -15,7 +15,7 @@ new App();
 
 $shopId = (int) Session::get('shop_id');
 if (!$shopId) {
-    header('Location: /register.php');
+    header('Location: /register');
     exit;
 }
 
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Session::flash('success', 'Category deleted.');
         }
     }
-    header('Location: /categories/');
+    header('Location: /categories');
     exit;
 }
 
@@ -55,11 +55,11 @@ ob_start();
 ?>
 <div class="merchant-shell">
     <aside class="merchant-sidebar d-none d-lg-flex">
-        <a href="/dashboard/" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
+        <a href="/dashboard" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
         <nav class="merchant-nav">
-            <a href="/dashboard/"><span>▦</span> Overview</a>
-            <a href="/products/"><span>◫</span> Products</a>
-            <a class="active" href="/categories/"><span>◇</span> Categories</a>
+            <a href="/dashboard"><span>▦</span> Overview</a>
+            <a href="/products"><span>◫</span> Products</a>
+            <a class="active" href="/categories"><span>◇</span> Categories</a>
         </nav>
     </aside>
 

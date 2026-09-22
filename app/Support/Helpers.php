@@ -34,3 +34,18 @@ function asset_url(string $path): string
     $file = dirname(__DIR__, 2) . '/public' . $path;
     return is_file($file) ? $path . '?v=' . filemtime($file) : $path;
 }
+
+
+function slugify(string $value): string
+{
+    $value = trim($value);
+    $value = preg_replace('/[^a-zA-Z0-9]+/', '-', $value) ?? '';
+    $value = strtolower(trim($value, '-'));
+
+    return $value;
+}
+
+function route_url(string $path = ''): string
+{
+    return '/' . ltrim($path, '/');
+}

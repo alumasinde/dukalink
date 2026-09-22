@@ -354,3 +354,12 @@ html{scroll-behavior:smooth}body{background:var(--dk-bg);color:var(--dk-text);fo
     box-shadow: 0 18px 50px rgba(15, 23, 42, .25);
     z-index: 1000;
 }
+
+
+.shop-link-preview {
+    background: var(--dk-primary-soft);
+    border: 1px solid #DDD6FE;
+    border-radius: 14px;
+    padding: 16px;
+    color: var(--dk-primary);
+}

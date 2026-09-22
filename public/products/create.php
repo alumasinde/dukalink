@@ -16,7 +16,7 @@ new App();
 
 $shopId = (int) Session::get('shop_id');
 if (!$shopId) {
-    header('Location: /register.php');
+    header('Location: /register');
     exit;
 }
 
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
 
                 Session::flash('success', 'Product created.');
-                header('Location: /products/');
+                header('Location: /products');
                 exit;
             } catch (\Throwable $e) {
                 Session::flash('error', 'Could not create the product. Please check the details.');
@@ -66,18 +66,18 @@ ob_start();
 ?>
 <div class="merchant-shell">
     <aside class="merchant-sidebar d-none d-lg-flex">
-        <a href="/dashboard/" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
+        <a href="/dashboard" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
         <nav class="merchant-nav">
-            <a href="/dashboard/"><span>▦</span> Overview</a>
-            <a class="active" href="/products/"><span>◫</span> Products</a>
-            <a href="/categories/"><span>◇</span> Categories</a>
+            <a href="/dashboard"><span>▦</span> Overview</a>
+            <a class="active" href="/products"><span>◫</span> Products</a>
+            <a href="/categories"><span>◇</span> Categories</a>
         </nav>
     </aside>
 
     <main class="merchant-main">
         <div class="merchant-topbar">
             <div>
-                <a href="/products/" class="small text-secondary">← Products</a>
+                <a href="/products" class="small text-secondary">← Products</a>
                 <h1 class="h3 fw-bold mt-1 mb-0">Add product</h1>
             </div>
         </div>

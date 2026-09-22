@@ -17,7 +17,7 @@ new App();
 
 $shopId = (int) Session::get('shop_id');
 if (!$shopId) {
-    header('Location: /register.php');
+    header('Location: /register');
     exit;
 }
 
@@ -41,9 +41,9 @@ ob_start();
         <div class="small text-uppercase text-secondary fw-bold mb-2">Shop</div>
 
         <nav class="merchant-nav">
-            <a class="active" href="/dashboard/"><span>▦</span> Overview</a>
-            <a href="/products/"><span>◫</span> Products</a>
-            <a href="/categories/"><span>◇</span> Categories</a>
+            <a class="active" href="/dashboard"><span>▦</span> Overview</a>
+            <a href="/products"><span>◫</span> Products</a>
+            <a href="/categories"><span>◇</span> Categories</a>
             <a href="#"><span>▣</span> Orders</a>
             <a href="#"><span>◉</span> Customers</a>
         </nav>
@@ -52,7 +52,7 @@ ob_start();
             <a href="/shop/<?= e($shop['slug']) ?>" target="_blank" class="store-preview-link">
                 <span>↗</span> View my shop
             </a>
-            <a href="#" class="merchant-nav-link"><span>⚙</span> Settings</a>
+            <a href="/settings/shop" class="merchant-nav-link"><span>⚙</span> Settings</a>
         </div>
     </aside>
 
@@ -62,7 +62,7 @@ ob_start();
                 <div class="small text-secondary">Your shop</div>
                 <h1 class="h3 fw-bold mb-0"><?= e($shop['name']) ?></h1>
             </div>
-            <a href="/products/create.php" class="btn btn-primary">+ Add product</a>
+            <a href="/products/create" class="btn btn-primary">+ Add product</a>
         </div>
 
         <section class="dashboard-welcome">
@@ -71,7 +71,7 @@ ob_start();
                 <h2 class="h4 fw-bold mt-2 mb-1">Build your catalogue</h2>
                 <p class="text-secondary mb-0">Add products and make your storefront useful to customers.</p>
             </div>
-            <a href="/products/create.php" class="btn btn-light border">Add your first product</a>
+            <a href="/products/create" class="btn btn-light border">Add your first product</a>
         </section>
 
         <div class="row g-3 mt-1">
@@ -111,7 +111,7 @@ ob_start();
                     <h2 class="h5 fw-bold mb-1">Products</h2>
                     <p class="small text-secondary mb-0">Your latest catalogue items.</p>
                 </div>
-                <a href="/products/" class="btn btn-sm btn-outline-dark">View all</a>
+                <a href="/products" class="btn btn-sm btn-outline-dark">View all</a>
             </div>
 
             <?php if (!$products): ?>
@@ -119,7 +119,7 @@ ob_start();
                     <div class="empty-icon">＋</div>
                     <h3 class="h5 fw-bold">Your catalogue is empty</h3>
                     <p class="text-secondary">Add your first product and start building your storefront.</p>
-                    <a href="/products/create.php" class="btn btn-primary">Add product</a>
+                    <a href="/products/create" class="btn btn-primary">Add product</a>
                 </div>
             <?php else: ?>
                 <div class="table-responsive">

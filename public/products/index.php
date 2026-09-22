@@ -14,7 +14,7 @@ new App();
 
 $shopId = (int) Session::get('shop_id');
 if (!$shopId) {
-    header('Location: /register.php');
+    header('Location: /register');
     exit;
 }
 
@@ -24,12 +24,12 @@ ob_start();
 ?>
 <div class="merchant-shell">
     <aside class="merchant-sidebar d-none d-lg-flex">
-        <a href="/dashboard/" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
+        <a href="/dashboard" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
         <div class="small text-uppercase text-secondary fw-bold mb-2">Shop</div>
         <nav class="merchant-nav">
-            <a href="/dashboard/"><span>▦</span> Overview</a>
-            <a class="active" href="/products/"><span>◫</span> Products</a>
-            <a href="/categories/"><span>◇</span> Categories</a>
+            <a href="/dashboard"><span>▦</span> Overview</a>
+            <a class="active" href="/products"><span>◫</span> Products</a>
+            <a href="/categories"><span>◇</span> Categories</a>
             <a href="#"><span>▣</span> Orders</a>
             <a href="#"><span>◉</span> Customers</a>
         </nav>
@@ -41,7 +41,7 @@ ob_start();
                 <div class="small text-secondary">Catalogue</div>
                 <h1 class="h3 fw-bold mb-0">Products</h1>
             </div>
-            <a href="/products/create.php" class="btn btn-primary">+ Add product</a>
+            <a href="/products/create" class="btn btn-primary">+ Add product</a>
         </div>
 
         <div class="panel">
@@ -60,7 +60,7 @@ ob_start();
                     <div class="empty-icon">◇</div>
                     <h3 class="h5 fw-bold">No products yet</h3>
                     <p class="text-secondary">Add a product with a name, price and optional image.</p>
-                    <a href="/products/create.php" class="btn btn-primary">Add product</a>
+                    <a href="/products/create" class="btn btn-primary">Add product</a>
                 </div>
             <?php else: ?>
                 <div class="row g-3 p-3" data-product-grid>
@@ -85,7 +85,7 @@ ob_start();
                                                 <div class="small text-secondary text-decoration-line-through">KSh <?= number_format((float)$product['compare_at_price'], 2) ?></div>
                                             <?php endif; ?>
                                         </div>
-                                        <a href="/products/edit.php?id=<?= (int)$product['id'] ?>" class="btn btn-sm btn-outline-dark">Edit</a>
+                                        <a href="/products/edit?id=<?= (int)$product['id'] ?>" class="btn btn-sm btn-outline-dark">Edit</a>
                                     </div>
                                 </div>
                             </article>
