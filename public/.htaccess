@@ -1,17 +1,16 @@
 RewriteEngine On
 
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
-
+# Dukame API v1
 RewriteRule ^api/v1(?:/.*)?$ api.php [L,QSA]
 
-RewriteRule ^$ index.php [L]
+# Clean application routes
+RewriteRule ^$ index.php [L,QSA]
 RewriteRule ^login/?$ login.php [L,QSA]
 RewriteRule ^logout/?$ logout.php [L,QSA]
 RewriteRule ^register/?$ register.php [L,QSA]
 RewriteRule ^onboarding/?$ onboarding.php [L,QSA]
 RewriteRule ^onboarding/complete/?$ onboarding-complete.php [L,QSA]
+
 RewriteRule ^dashboard/?$ dashboard/index.php [L,QSA]
 RewriteRule ^products/?$ products/index.php [L,QSA]
 RewriteRule ^products/create/?$ products/create.php [L,QSA]
@@ -26,7 +25,22 @@ RewriteRule ^settings/shop/?$ settings/shop.php [L,QSA]
 RewriteRule ^cart/?$ cart/index.php [L,QSA]
 RewriteRule ^checkout/?$ checkout/index.php [L,QSA]
 RewriteRule ^track/?$ track/index.php [L,QSA]
-RewriteRule ^([a-z0-9]+(?:-[a-z0-9]+)*)/product/([a-z0-9]+(?:-[a-z0-9]+)*)/?$ shop/product.php?slug=$1&product=$2 [L,QSA]
 
-RewriteRule ^shop/([a-z0-9]+(?:-[a-z0-9]+)*)/?$ /$1 [R=301,L,NE]
-RewriteRule ^([a-z0-9]+(?:-[a-z0-9]+)*)/?$ shop/index.php?slug=$1 [L,QSA]
+# Static files/directories not handled by the application routes above.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Legacy storefront URL -> short storefront URL
+RewriteRule ^shop/([a-z0-9]+(?:-[a-z0-9]+)*)/?$ /$1 [R=301,L,NE,NC]
+
+# Public product page: /merchant-slug/product/product-slug
+RewriteRule ^([a-z0-9]+(?:-[a-z0-9]+)*)/product/([a-z0-9]+(?:-[a-z0-9]+)*)/?$ shop/product.php?slug=$1&product=$2 [L,QSA,NC]
+
+# Public merchant storefront: /merchant-slug
+RewriteRule ^([a-z0-9]+(?:-[a-z0-9]+)*)/?$ shop/index.php?slug=$1 [L,QSA,NC]
+
+# Static files (CSS, JS, images, uploads) are served directly.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]

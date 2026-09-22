@@ -3,24 +3,34 @@
 declare(strict_types=1);
 
 /*
- * Router for PHP's built-in development server.
+ * Dukame development router.
  *
- * Apache/XAMPP uses public/.htaccess.
- * `php -S localhost:8000 -t public public/router.php`
- * uses this file so the same clean URLs work locally.
+ * Run:
+ *   php -S localhost:8000 -t public public/router.php
+ *
+ * Apache/XAMPP uses public/.htaccess instead.
  */
 
-$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-$path = trim($uri, '/');
+$uri = (string)($_SERVER['REQUEST_URI'] ?? '/');
+$path = parse_url($uri, PHP_URL_PATH);
+$path = is_string($path) ? $path : '/';
 
-if ($path === 'api/v1' || str_starts_with($path, 'api/v1/')) {
+// Normalize duplicate/trailing slashes without touching query parameters.
+$path = '/' . trim(preg_replace('#/+#', '/', $path) ?? '/', '/');
+if ($path !== '/') {
+    $path = rtrim($path, '/');
+}
+
+$route = trim($path, '/');
+
+if ($route === 'api/v1' || str_starts_with($route, 'api/v1/')) {
     require __DIR__ . '/api.php';
     return true;
 }
 
-if ($path !== '') {
-    $candidate = __DIR__ . '/' . $path;
-
+// Let the built-in server serve real public files (CSS, JS, images, uploads, etc.).
+if ($path !== '/') {
+    $candidate = __DIR__ . '/' . ltrim($path, '/');
     if (is_file($candidate)) {
         return false;
     }
@@ -52,28 +62,37 @@ $routes = [
     'track' => 'track/index.php',
 ];
 
-if (isset($routes[$path])) {
-    require __DIR__ . '/' . $routes[$path];
+if (isset($routes[$route])) {
+    require __DIR__ . '/' . $routes[$route];
     return true;
 }
 
-if (preg_match('#^([a-z0-9]+(?:-[a-z0-9]+)*)/product/([a-z0-9]+(?:-[a-z0-9]+)*)$#', $path, $m)) {
-    $_GET['slug'] = $m[1];
-    $_GET['product'] = $m[2];
+// Legacy public shop URL. Redirect to the short root-level URL.
+if (preg_match('#^shop/([a-z0-9]+(?:-[a-z0-9]+)*)$#i', $route, $m)) {
+    header('Location: /' . strtolower($m[1]), true, 301);
+    return true;
+}
+
+// Public product URL:
+//   /merchant-slug/product/product-slug
+if (preg_match('#^([a-z0-9]+(?:-[a-z0-9]+)*)/product/([a-z0-9]+(?:-[a-z0-9]+)*)$#i', $route, $m)) {
+    $_GET['slug'] = strtolower($m[1]);
+    $_GET['product'] = strtolower($m[2]);
     require __DIR__ . '/shop/product.php';
     return true;
 }
 
-if (preg_match('#^shop/([a-z0-9]+(?:-[a-z0-9]+)*)$#', $path, $m)) {
-    header('Location: /' . $m[1], true, 301);
-    return true;
-}
-
-if (preg_match('#^([a-z0-9]+(?:-[a-z0-9]+)*)$#', $path, $m)) {
-    $_GET['slug'] = $m[1];
+// Public merchant storefront:
+//   /merchant-slug
+//
+// This MUST come after all reserved application routes above. That prevents
+// /login, /products, /cart, /api, etc. from being interpreted as shop slugs.
+if (preg_match('#^([a-z0-9]+(?:-[a-z0-9]+)*)$#i', $route, $m)) {
+    $_GET['slug'] = strtolower($m[1]);
     require __DIR__ . '/shop/index.php';
     return true;
 }
 
 http_response_code(404);
 require __DIR__ . '/404.php';
+return true;
