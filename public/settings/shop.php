@@ -162,7 +162,7 @@ ob_start();
                 <div class="small text-secondary">Shop settings</div>
                 <h1 class="h3 fw-bold mb-0">Customize your shop</h1>
             </div>
-            <a href="<?= e(\App\Support\shop_url($shop['slug'])) ?>" target="_blank" class="btn btn-outline-dark">View storefront ↗</a>
+            <a href="<?= e(\App\Support\shop_url($shop['slug'])) ?>" target="_blank" class="btn btn-outline-dark">View storefront</a>
         </div>
 
         <?php require dirname(__DIR__, 2) . '/app/Views/components/alert.php'; ?>
@@ -286,74 +286,13 @@ ob_start();
                 </section>
 
                 <section class="panel p-4 mt-4">
-                    <h2 class="h5 fw-bold">Payments & checkout</h2>
-                    <p class="small text-secondary">Set the defaults that will be used when orders are introduced.</p>
-                    <form method="post" class="mt-3">
-                        <?= Csrf::field() ?>
-                        <input type="hidden" name="action" value="payments">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Currency</label>
-                            <select class="form-select" name="currency">
-                                <?php foreach (['KES','USD','UGX','TZS'] as $currency): ?>
-                                    <option value="<?=e($currency)?>" <?=($shop['currency'] ?? 'KES') === $currency ? 'selected' : ''?>><?=e($currency)?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Order number prefix</label>
-                                <input class="form-control" name="order_number_prefix" value="<?=e($shop['order_number_prefix'] ?? 'DK')?>" maxlength="12" pattern="[A-Za-z0-9]{1,12}" required>
-                                <div class="form-text">Example: DK → DK-01001.</div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Next order number</label>
-                                <input class="form-control" type="number" name="next_order_number" value="<?=e($shop['next_order_number'] ?? 1001)?>" min="1" required>
-                                <div class="form-text">Used for the next new order.</div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">WhatsApp number</label>
-                            <input class="form-control" name="whatsapp_number" value="<?=e($shop['whatsapp_number'] ?? '')?>" placeholder="0712 345 678">
-                            <div class="form-text">Customers will use this number to send orders on WhatsApp. No Meta API setup is required.</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">M-Pesa phone</label>
-                            <input class="form-control" name="mpesa_phone" value="<?=e($shop['mpesa_phone'] ?? '')?>" placeholder="0712 345 678">
-                            <div class="form-text">The number that should receive the customer's M-Pesa payment.</div>
-                        </div>
-                        <hr class="my-4">
-                        <h3 class="h6 fw-bold">M-Pesa STK Push</h3>
-                        <?php if (!empty($shop['mpesa_credentials_configured'])): ?><div class="alert alert-success py-2 small">Daraja credentials are configured.</div><?php endif; ?>
-                        <p class="small text-secondary">Enter your Daraja credentials. Sensitive credentials are encrypted before being stored.</p>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Environment</label>
-                            <select class="form-select" name="mpesa_environment">
-                                <option value="sandbox" <?=($shop['mpesa_environment'] ?? 'sandbox') === 'sandbox' ? 'selected' : ''?>>Sandbox</option>
-                                <option value="production" <?=($shop['mpesa_environment'] ?? '') === 'production' ? 'selected' : ''?>>Production</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Business Short Code</label>
-                            <input class="form-control" name="mpesa_shortcode" value="<?=e($shop['mpesa_shortcode'] ?? '')?>" placeholder="174379">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Consumer Key</label>
-                            <input class="form-control" name="mpesa_consumer_key" placeholder="<?= !empty($shop['mpesa_credentials_configured']) ? 'Saved — leave blank to keep current' : 'Paste Consumer Key' ?>" autocomplete="off">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Consumer Secret</label>
-                            <input class="form-control" type="password" name="mpesa_consumer_secret" placeholder="<?= !empty($shop['mpesa_credentials_configured']) ? 'Saved — leave blank to keep current' : 'Paste Consumer Secret' ?>" autocomplete="new-password">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">STK Passkey</label>
-                            <input class="form-control" type="password" name="mpesa_passkey" placeholder="<?= !empty($shop['mpesa_credentials_configured']) ? 'Saved — leave blank to keep current' : 'Paste STK Passkey' ?>" autocomplete="new-password">
-                        </div>
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="allow_cash_on_delivery" id="cod" <?=!empty($shop['allow_cash_on_delivery']) ? 'checked' : ''?>>
-                            <label class="form-check-label" for="cod">Allow cash on delivery</label>
-                        </div>
-                        <button class="btn btn-outline-dark">Save payment settings</button>
-                    </form>
+                    <h2 class="h5 fw-bold mb-1">Payments</h2>
+                    <p class="small text-secondary">Choose which payment methods customers can use at checkout.</p>
+                    <div class="payment-method-preview mt-3">
+                        <div><span>M-Pesa</span><strong><?= !empty($shop['mpesa_enabled']) ? 'Enabled' : 'Disabled' ?></strong></div>
+                        <div><span>Cash on delivery</span><strong><?= !empty($shop['allow_cash_on_delivery']) ? 'Enabled' : 'Disabled' ?></strong></div>
+                    </div>
+                    <a class="btn btn-primary w-100 mt-3" href="/settings/payments">Manage payment methods</a>
                 </section>
 
                 <section class="panel p-4 mt-4">

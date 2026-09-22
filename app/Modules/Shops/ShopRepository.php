@@ -16,8 +16,10 @@ final class ShopRepository
     {
         $stmt = $this->db->prepare(
             'SELECT s.*, ss.currency, ss.order_number_prefix, ss.next_order_number, ss.whatsapp_number, ss.mpesa_phone, ss.allow_cash_on_delivery,
-                    ss.mpesa_environment, ss.mpesa_shortcode, ss.mpesa_consumer_key,
-                    ss.mpesa_consumer_secret, ss.mpesa_passkey
+                    ss.mpesa_environment, ss.mpesa_shortcode, ss.mpesa_enabled, ss.mpesa_consumer_key,
+                    ss.mpesa_consumer_secret, ss.mpesa_passkey,
+                    ss.allow_delivery, ss.allow_store_pickup, ss.allow_cash_on_pickup, ss.delivery_pricing_mode,
+                    ss.delivery_flat_fee, ss.free_delivery_minimum, ss.pickup_address, ss.pickup_instructions
              FROM shops s
              LEFT JOIN shop_settings ss ON ss.shop_id = s.id
              WHERE s.id = :id LIMIT 1'
@@ -116,6 +118,7 @@ final class ShopRepository
                  next_order_number = :next_order_number,
                  whatsapp_number = :whatsapp_number,
                  mpesa_phone = :mpesa_phone,
+                 mpesa_enabled = :mpesa_enabled,
                  mpesa_environment = :mpesa_environment,
                  mpesa_shortcode = :mpesa_shortcode,
                  mpesa_consumer_key = :mpesa_consumer_key,
@@ -128,6 +131,7 @@ final class ShopRepository
             'shop_id' => $shopId,
             'currency' => $data['currency'],
             'mpesa_phone' => $data['mpesa_phone'] ?: null,
+            'mpesa_enabled' => !empty($data['mpesa_enabled']) ? 1 : 0,
             'whatsapp_number' => $data['whatsapp_number'] ?: null,
             'order_number_prefix' => strtoupper(trim((string)($data['order_number_prefix'] ?? 'DK'))),
             'next_order_number' => max(1, (int)($data['next_order_number'] ?? 1001)),
@@ -138,6 +142,69 @@ final class ShopRepository
             'mpesa_passkey' => $passkey,
             'allow_cash_on_delivery' => !empty($data['allow_cash_on_delivery']) ? 1 : 0,
         ]);
+    }
+
+    public function deliveryZones(int $shopId, bool $activeOnly = false): array
+    {
+        $sql = 'SELECT id, name, fee, sort_order, status FROM delivery_zones WHERE shop_id = :shop_id';
+        if ($activeOnly) $sql .= " AND status = 'active'";
+        $sql .= ' ORDER BY sort_order ASC, name ASC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['shop_id' => $shopId]);
+        return $stmt->fetchAll();
+    }
+
+    public function deliveryZone(int $shopId, int $zoneId): ?array
+    {
+        $stmt = $this->db->prepare("SELECT id, name, fee, sort_order, status FROM delivery_zones WHERE id = :id AND shop_id = :shop_id LIMIT 1");
+        $stmt->execute(['id' => $zoneId, 'shop_id' => $shopId]);
+        return $stmt->fetch() ?: null;
+    }
+
+    public function saveDeliverySettings(int $shopId, array $data): void
+    {
+        $stmt = $this->db->prepare('UPDATE shop_settings SET
+            allow_delivery = :allow_delivery,
+            allow_store_pickup = :allow_store_pickup,
+            allow_cash_on_pickup = :allow_cash_on_pickup,
+            delivery_pricing_mode = :delivery_pricing_mode,
+            delivery_flat_fee = :delivery_flat_fee,
+            free_delivery_minimum = :free_delivery_minimum,
+            pickup_address = :pickup_address,
+            pickup_instructions = :pickup_instructions
+            WHERE shop_id = :shop_id');
+        $stmt->execute([
+            'shop_id' => $shopId,
+            'allow_delivery' => !empty($data['allow_delivery']) ? 1 : 0,
+            'allow_store_pickup' => !empty($data['allow_store_pickup']) ? 1 : 0,
+            'allow_cash_on_pickup' => !empty($data['allow_cash_on_pickup']) ? 1 : 0,
+            'delivery_pricing_mode' => ($data['delivery_pricing_mode'] ?? 'flat') === 'zone' ? 'zone' : 'flat',
+            'delivery_flat_fee' => max(0, (float)($data['delivery_flat_fee'] ?? 0)),
+            'free_delivery_minimum' => (($data['free_delivery_minimum'] ?? '') !== '' && (float)$data['free_delivery_minimum'] > 0) ? (float)$data['free_delivery_minimum'] : null,
+            'pickup_address' => trim((string)($data['pickup_address'] ?? '')) ?: null,
+            'pickup_instructions' => trim((string)($data['pickup_instructions'] ?? '')) ?: null,
+        ]);
+    }
+
+    public function createDeliveryZone(int $shopId, string $name, float $fee, int $sortOrder = 0): int
+    {
+        $stmt = $this->db->prepare('INSERT INTO delivery_zones (shop_id, name, fee, sort_order, status) VALUES (:shop_id, :name, :fee, :sort_order, \'active\')');
+        $stmt->execute(['shop_id'=>$shopId, 'name'=>$name, 'fee'=>max(0,$fee), 'sort_order'=>$sortOrder]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function updateDeliveryZone(int $shopId, int $zoneId, string $name, float $fee, int $sortOrder, string $status = 'active'): bool
+    {
+        $status = $status === 'hidden' ? 'hidden' : 'active';
+        $stmt = $this->db->prepare('UPDATE delivery_zones SET name=:name, fee=:fee, sort_order=:sort_order, status=:status WHERE id=:id AND shop_id=:shop_id');
+        $stmt->execute(['name'=>$name, 'fee'=>max(0,$fee), 'sort_order'=>$sortOrder, 'status'=>$status, 'id'=>$zoneId, 'shop_id'=>$shopId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    public function deleteDeliveryZone(int $shopId, int $zoneId): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM delivery_zones WHERE id=:id AND shop_id=:shop_id');
+        $stmt->execute(['id'=>$zoneId, 'shop_id'=>$shopId]);
     }
 
     public function reserveOrderNumber(int $shopId): string

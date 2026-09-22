@@ -23,6 +23,9 @@ if ($path !== '/') {
 
 $route = trim($path, '/');
 
+if ($route === 'robots.txt') { require __DIR__ . '/seo/robots.php'; return true; }
+if ($route === 'sitemap.xml') { require __DIR__ . '/seo/sitemap.php'; return true; }
+
 if ($route === 'api/v1' || str_starts_with($route, 'api/v1/')) {
     require __DIR__ . '/api.php';
     return true;
@@ -56,6 +59,8 @@ $routes = [
 
     'settings' => 'settings/index.php',
     'settings/shop' => 'settings/shop.php',
+    'settings/payments' => 'settings/payments.php',
+    'settings/delivery' => 'settings/delivery.php',
     'settings/notifications' => 'settings/notifications.php',
 
     'cart' => 'cart/index.php',

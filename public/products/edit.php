@@ -5,6 +5,7 @@ use App\Bootstrap\App;
 use App\Database\Database;
 use App\Modules\Categories\CategoryRepository;
 use App\Modules\Products\ProductRepository;
+use App\Modules\Shops\ShopRepository;
 use App\Support\Csrf;
 use App\Support\Session;
 use App\Support\Auth;
@@ -47,21 +48,21 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
     }
 }
-$merchantShop = (new App\Modules\Shops\ShopRepository($db))->find($shopId);
+$merchantShop = (new ShopRepository($db))->find($shopId);
 $merchantSection = 'products';
 ob_start(); ?>
 <div class="merchant-shell">
 <?php require dirname(__DIR__, 2) . '/app/Views/components/merchant-sidebar.php'; ?>
 <main class="merchant-main">
-<div class="merchant-topbar"><div><a href="/products" class="small text-secondary">← Products</a><h1 class="h3 fw-bold mt-1 mb-0">Edit product</h1></div></div>
+<div class="merchant-topbar"><div><a href="/products" class="small text-secondary"> Products</a><h1 class="h3 fw-bold mt-1 mb-0">Edit product</h1></div></div>
 <form method="post" enctype="multipart/form-data" class="row g-4">
 <?= Csrf::field() ?>
 <div class="col-lg-8"><section class="panel p-4"><?php require dirname(__DIR__,2).'/app/Views/components/alert.php'; ?>
 <div class="mb-3"><label class="form-label fw-semibold">Product name</label><input class="form-control form-control-lg" name="name" value="<?=e($product['name'])?>" required></div>
 <div class="mb-4"><label class="form-label fw-semibold">Description</label><textarea class="form-control" name="description" rows="5"><?=e($product['description']??'')?></textarea></div><div class="mb-4"><label class="form-label fw-semibold">Options / sizes <span class="text-secondary">(optional)</span></label><input class="form-control" name="options" value="<?=e(implode(', ', json_decode($product['options_json'] ?? '[]', true) ?: []))?>" placeholder="e.g. Small, Medium, Large, XL"><div class="form-text">Use this for sizes, colours, materials or other customer choices.</div></div>
-<div class="row g-3"><div class="col-md-6"><label class="form-label fw-semibold">Price (KSh)</label><input class="form-control form-control-lg" type="number" step="0.01" name="price" value="<?=e($product['price'])?>" required></div>
-<div class="col-md-6"><label class="form-label">Compare-at price</label><input class="form-control form-control-lg" type="number" step="0.01" name="compare_at_price" value="<?=e($product['compare_at_price']??'')?>"></div></div></section>
-<section class="panel p-4 mt-4"><h2 class="h6 fw-bold mb-3">Inventory</h2><div class="row g-3"><div class="col-md-6"><label class="form-label">SKU</label><input class="form-control" name="sku" value="<?=e($product['sku']??'')?>"></div><div class="col-md-6"><label class="form-label">Stock quantity</label><input class="form-control" type="number" name="stock_quantity" value="<?=e($product['stock_quantity'])?>"></div></div><div class="form-check mt-3"><input class="form-check-input" type="checkbox" name="track_inventory" id="trackInventory" <?=$product['track_inventory']?'checked':''?>><label class="form-check-label" for="trackInventory">Track inventory</label></div></section></div>
+<div class="row g-3"><div class="col-md-6"><label class="form-label fw-semibold">Selling price (KSh)</label><input class="form-control form-control-lg" type="number" step="0.01" name="price" value="<?=e($product['price'])?>" required></div>
+<div class="col-md-6"><label class="form-label">Original price</label><input class="form-control form-control-lg" type="number" step="0.01" name="compare_at_price" value="<?=e($product['compare_at_price']??'')?>"></div></div></section>
+<section class="panel p-4 mt-4"><h2 class="h6 fw-bold mb-3">Inventory</h2><div class="row g-3"><div class="col-md-6"><label class="form-label">SKU</label><input class="form-control" name="sku" value="<?=e($product['sku']??'')?>"></div><div class="col-md-6"><label class="form-label">Stock quantity</label><input class="form-control" type="number" name="stock_quantity" value="<?=e($product['stock_quantity'])?>"></div></div><div class="form-check mt-3"><input class="form-check-input" type="checkbox" name="track_inventory" id="trackInventory" <?=$product['track_inventory']?'checked':''?>><label class="form-check-label" for="trackInventory">Track inventory</label></div><div class="form-text mt-2">When enabled, stock below 1 makes the product unavailable on the storefront.</div></section></div>
 <div class="col-lg-4"><section class="panel p-4">
 <label class="form-label fw-semibold">Product image</label>
 <?php if (!empty($product['image_path'])): ?><img src="<?=e($product['image_path'])?>" alt="" class="img-fluid rounded mb-3" style="max-height:180px;object-fit:cover"><?php endif; ?>

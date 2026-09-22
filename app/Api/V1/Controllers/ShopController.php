@@ -90,6 +90,7 @@ final class ShopController
             'next_order_number' => $nextOrderNumber,
             'whatsapp_number' => trim((string)($data['whatsapp_number'] ?? '')),
             'mpesa_phone' => trim((string)($data['mpesa_phone'] ?? '')),
+            'mpesa_enabled' => !empty($data['mpesa_enabled']),
             'mpesa_environment' => in_array(($data['mpesa_environment'] ?? 'sandbox'), ['sandbox','production'], true) ? $data['mpesa_environment'] : 'sandbox',
             'mpesa_shortcode' => trim((string)($data['mpesa_shortcode'] ?? '')),
             'mpesa_consumer_key' => trim((string)($data['mpesa_consumer_key'] ?? '')),

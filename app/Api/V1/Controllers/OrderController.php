@@ -76,7 +76,7 @@ final class OrderController
         $slug = strtolower(trim((string)($data['shop_slug'] ?? '')));
         if ($slug === '') JsonResponse::error('Shop slug is required.', 422, 'validation_error');
         $db = Database::connection();
-        $stmt = $db->prepare('SELECT id, slug, name, status, phone, currency FROM shops s LEFT JOIN shop_settings ss ON ss.shop_id = s.id WHERE s.slug = :slug AND s.status = "active" LIMIT 1');
+        $stmt = $db->prepare('SELECT s.id, s.slug, s.name, s.status, s.phone, ss.currency FROM shops AS s LEFT JOIN shop_settings AS ss ON ss.shop_id = s.id WHERE s.slug = :slug AND s.status = "active" LIMIT 1');
         $stmt->execute(['slug' => $slug]);
         $shop = $stmt->fetch();
         if (!$shop) JsonResponse::error('Store not found.', 404, 'store_not_found');
@@ -104,7 +104,7 @@ final class OrderController
         JsonResponse::send([
             'order' => $order,
             'whatsapp_url' => !empty($settings['whatsapp_number']) ? whatsapp_url((string)$settings['whatsapp_number'], $message) : null,
-            'mpesa' => $mpesa ? ['status'=>'pending','message'=>'STK Push sent. Complete payment on your phone.'] : null,
+            'mpesa' => $mpesa ? ['status'=>$mpesa['status'] ?? 'pending','message'=>$mpesa['message'] ?? 'STK Push request sent.'] : null,
         ], 201);
     }
 
@@ -114,7 +114,7 @@ final class OrderController
         $orderNumber = trim((string)($data['order_number'] ?? ''));
         $phone = normalize_phone((string)($data['phone'] ?? ''));
         if ($orderNumber === '' || $phone === '') JsonResponse::error('Order number and phone number are required.', 422, 'validation_error');
-        $stmt = Database::connection()->prepare('SELECT o.id, o.order_number, o.customer_name, o.currency, o.subtotal, o.delivery_fee, o.total, o.status, o.payment_method, o.payment_status, o.delivery_address, o.created_at, s.name AS shop_name, s.slug AS shop_slug, s.logo_path
+        $stmt = Database::connection()->prepare('SELECT o.id, o.order_number, o.customer_name, o.currency, o.subtotal, o.delivery_fee, o.total, o.status, o.payment_method, o.payment_status, o.delivery_address, o.fulfillment_method, o.delivery_zone_name, o.created_at, s.name AS shop_name, s.slug AS shop_slug, s.logo_path
             FROM orders o INNER JOIN shops s ON s.id = o.shop_id
             WHERE o.order_number = :order_number AND o.customer_phone = :phone AND s.status = "active" LIMIT 1');
         $stmt->execute(['order_number'=>$orderNumber,'phone'=>$phone]);
@@ -151,6 +151,8 @@ final class OrderController
             if ($selected) $optionText = ' [' . implode(', ', $selected) . ']';
             $lines[] = $item['product_name'].$optionText.' × '.$item['quantity'].' — '.$order['currency'].' '.number_format((float)$item['line_total'], 2);
         }
+        $lines[]=''; $lines[]='Fulfilment: '.($order['fulfillment_method']==='pickup'?'Store pickup':'Delivery');
+        if (($order['delivery_zone_name'] ?? '') !== '') $lines[]='Delivery area: '.$order['delivery_zone_name'];
         $lines[]=''; $lines[]='TOTAL: '.$order['currency'].' '.number_format((float)$order['total'],2); $lines[]=''; $lines[]='Track order: '.rtrim((string)($_ENV['APP_URL']??''),'/').'/track'; $lines[]=''; $lines[]='Manage this order: '.rtrim((string)($_ENV['APP_URL']??''),'/').'/orders/view?id='.$order['id'];
         return implode("\n", $lines);
     }

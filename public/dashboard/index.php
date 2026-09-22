@@ -148,6 +148,23 @@ ob_start();
             </div>
         </section>
 
+
+
+        <?php
+        $mpesaAvailable = !empty($shop['mpesa_enabled']) && !empty($shop['mpesa_credentials_configured']) && !empty($shop['mpesa_phone']) && (($shop['currency'] ?? 'KES') === 'KES');
+        $codAvailable = !empty($shop['allow_cash_on_delivery']);
+        ?>
+        <?php if (!$mpesaAvailable && !$codAvailable): ?>
+            <section class="dashboard-payment-alert">
+                <div>
+                    <div class="small fw-bold text-uppercase">Checkout setup</div>
+                    <h2 class="h6 fw-bold mt-1 mb-1">Your store has no payment method enabled</h2>
+                    <p class="small mb-0">Customers can browse your products, but they cannot complete checkout until you enable M-Pesa or cash on delivery.</p>
+                </div>
+                <a href="/settings/payments" class="btn btn-primary">Enable payments</a>
+            </section>
+        <?php endif; ?>
+
         <div class="row g-3 mt-1">
             <div class="col-6 col-xl-3">
                 <a href="/products" class="metric-card metric-card-link">

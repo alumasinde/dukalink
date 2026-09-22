@@ -76,7 +76,7 @@ ob_start();
     <main class="merchant-main">
         <div class="merchant-topbar">
             <div>
-                <a href="/products" class="small text-secondary">← Products</a>
+                <a href="/products" class="small text-secondary"> Products</a>
                 <h1 class="h3 fw-bold mt-1 mb-0">Add product</h1>
             </div>
         </div>
@@ -105,11 +105,11 @@ ob_start();
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Price (KSh)</label>
+                            <label class="form-label fw-semibold">Selling price (KSh)</label>
                             <input class="form-control form-control-lg" type="number" step="0.01" min="0" name="price" placeholder="2500" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Compare-at price</label>
+                            <label class="form-label fw-semibold">Original price</label>
                             <input class="form-control form-control-lg" type="number" step="0.01" min="0" name="compare_at_price" placeholder="3000">
                         </div>
                     </div>
@@ -131,6 +131,7 @@ ob_start();
                         <input class="form-check-input" type="checkbox" name="track_inventory" id="trackInventory">
                         <label class="form-check-label" for="trackInventory">Track inventory for this product</label>
                     </div>
+                    <div class="form-text mt-2">When enabled, a product with stock below 1 is shown as out of stock and customers cannot add it to their cart.</div>
                 </section>
             </div>
 

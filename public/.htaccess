@@ -1,5 +1,9 @@
 RewriteEngine On
 
+# Dynamic SEO endpoints
+RewriteRule ^robots\.txt$ seo/robots.php [L,QSA]
+RewriteRule ^sitemap\.xml$ seo/sitemap.php [L,QSA]
+
 # Dukame API v1
 RewriteRule ^api/v1(?:/.*)?$ api.php [L,QSA]
 
@@ -22,6 +26,8 @@ RewriteRule ^customers/?$ customers/index.php [L,QSA]
 RewriteRule ^customers/view/?$ customers/view.php [L,QSA]
 RewriteRule ^settings/?$ settings/index.php [L,QSA]
 RewriteRule ^settings/shop/?$ settings/shop.php [L,QSA]
+RewriteRule ^settings/payments/?$ settings/payments.php [L,QSA]
+RewriteRule ^settings/delivery/?$ settings/delivery.php [L,QSA]
 RewriteRule ^settings/notifications/?$ settings/notifications.php [L,QSA]
 RewriteRule ^cart/?$ cart/index.php [L,QSA]
 RewriteRule ^checkout/?$ checkout/index.php [L,QSA]

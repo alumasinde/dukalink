@@ -89,6 +89,20 @@ ob_start();
                                 <div class="p-3">
                                     <div class="small text-secondary"><?= e($product['category_name'] ?: 'Uncategorized') ?></div>
                                     <h3 class="h6 fw-bold mt-1 mb-1"><?= e($product['name']) ?></h3>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <?php if (!empty($product['track_inventory'])): ?>
+                                            <?php if ((int)$product['stock_quantity'] < 1): ?>
+                                                <span class="badge text-bg-light border text-danger">Out of stock</span>
+                                            <?php else: ?>
+                                                <span class="badge text-bg-light border text-secondary"><?= (int)$product['stock_quantity'] ?> in stock</span>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="badge text-bg-light border text-secondary">Inventory not tracked</span>
+                                        <?php endif; ?>
+                                        <?php if ((float)($product['compare_at_price'] ?? 0) > (float)$product['price']): ?>
+                                            <span class="badge text-bg-light border text-warning-emphasis">Offer</span>
+                                        <?php endif; ?>
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-end mt-3">
                                         <div>
                                             <div class="fw-bold">KSh <?= number_format((float)$product['price'], 2) ?></div>

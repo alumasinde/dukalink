@@ -37,9 +37,11 @@ $merchantSection = $merchantSection ?? 'overview';
     <div class="small text-uppercase text-secondary fw-bold mb-2 mt-4">Store</div>
     <nav class="merchant-nav">
         <?php if ($merchantShop): ?>
-            <a href="<?= e(shop_url((string)$merchantShop['slug'])) ?>" target="_blank"><span>↗</span> View my shop</a>
+            <a href="<?= e(shop_url((string)$merchantShop['slug'])) ?>" target="_blank"><span> </span> View my shop</a>
         <?php endif; ?>
-        <a class="<?= $merchantSection === 'settings' ? 'active' : '' ?>" href="/settings/shop"><span>⚙</span> Settings</a>
+        <a class="<?= $merchantSection === 'settings' ? 'active' : '' ?>" href="/settings/shop"><span>⚙</span> Shop settings</a>
+        <a class="<?= $merchantSection === 'payments' ? 'active' : '' ?>" href="/settings/payments"><span>◉</span> Payments</a>
+        <a class="<?= $merchantSection === 'delivery' ? 'active' : '' ?>" href="/settings/delivery"><span>⌂</span> Delivery & Pickup</a>
         <a class="<?= $merchantSection === 'notifications' ? 'active' : '' ?>" href="/settings/notifications"><span>✉</span> SMS templates</a>
     </nav>
 
@@ -61,12 +63,12 @@ $merchantSection = $merchantSection ?? 'overview';
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
-        <?php $mobileNav = ['overview' => ['/dashboard','▦','Overview'], 'products' => ['/products','◫','Products'], 'categories' => ['/categories','◇','Categories'], 'orders' => ['/orders','▤','Orders'], 'customers' => ['/customers','♙','Customers'], 'settings' => ['/settings/shop','⚙','Settings'], 'notifications' => ['/settings/notifications','✉','SMS templates']]; ?>
+        <?php $mobileNav = ['overview' => ['/dashboard','▦','Overview'], 'products' => ['/products','◫','Products'], 'categories' => ['/categories','◇','Categories'], 'orders' => ['/orders','▤','Orders'], 'customers' => ['/customers','♙','Customers'], 'settings' => ['/settings/shop','⚙','Shop settings'], 'payments' => ['/settings/payments','◉','Payments'], 'delivery' => ['/settings/delivery','⌂','Delivery & Pickup'], 'notifications' => ['/settings/notifications','✉','SMS templates']]; ?>
         <nav class="merchant-nav">
             <?php foreach ($mobileNav as $key => [$url,$icon,$label]): ?>
                 <a class="<?= $merchantSection === $key ? 'active' : '' ?>" href="<?= e($url) ?>"><span><?= e($icon) ?></span> <?= e($label) ?></a>
             <?php endforeach; ?>
-            <?php if ($merchantShop): ?><a href="<?= e(shop_url((string)$merchantShop['slug'])) ?>" target="_blank"><span>↗</span> View my shop</a><?php endif; ?>
+            <?php if ($merchantShop): ?><a href="<?= e(shop_url((string)$merchantShop['slug'])) ?>" target="_blank"><span> </span> View my shop</a><?php endif; ?>
             <a href="/logout"><span>↪</span> Log out</a>
         </nav>
     </div>

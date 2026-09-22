@@ -63,7 +63,7 @@
                 </select>
             </div>
 
-            <button class="btn btn-primary btn-lg w-100">Continue →</button>
+            <button class="btn btn-primary btn-lg w-100">Continue </button>
         </form>
     </div>
 </div>

@@ -21,6 +21,8 @@ $migrations = [
     __DIR__ . '/migrations/008_order_customer_checkout_hardening.sql',
     __DIR__ . '/migrations/009_notifications_sms.sql',
     __DIR__ . '/migrations/010_payments.sql',
+    __DIR__ . '/migrations/011_payment_method_settings.sql',
+    __DIR__ . '/migrations/012_delivery_and_pickup.sql',
 ];
 
 foreach ($migrations as $file) {
