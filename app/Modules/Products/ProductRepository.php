@@ -48,10 +48,10 @@ final class ProductRepository
     {
         $stmt = $this->db->prepare(
             'INSERT INTO products
-             (shop_id, category_id, name, slug, description, sku, price, compare_at_price,
+             (shop_id, category_id, name, slug, description, options_json, sku, price, compare_at_price,
               stock_quantity, track_inventory, image_path, status, featured)
              VALUES
-             (:shop_id, :category_id, :name, :slug, :description, :sku, :price, :compare_at_price,
+             (:shop_id, :category_id, :name, :slug, :description, :options_json, :sku, :price, :compare_at_price,
               :stock_quantity, :track_inventory, :image_path, :status, :featured)'
         );
 
@@ -61,6 +61,7 @@ final class ProductRepository
             'name' => $data['name'],
             'slug' => $data['slug'],
             'description' => $data['description'] ?: null,
+            'options_json' => $data['options_json'] ?? null,
             'sku' => $data['sku'] ?: null,
             'price' => $data['price'],
             'compare_at_price' => $data['compare_at_price'] ?: null,
@@ -82,6 +83,7 @@ final class ProductRepository
                 name = :name,
                 slug = :slug,
                 description = :description,
+                options_json = :options_json,
                 sku = :sku,
                 price = :price,
                 compare_at_price = :compare_at_price,
@@ -100,6 +102,7 @@ final class ProductRepository
             'name' => $data['name'],
             'slug' => $data['slug'],
             'description' => $data['description'] ?: null,
+            'options_json' => $data['options_json'] ?? null,
             'sku' => $data['sku'] ?: null,
             'price' => $data['price'],
             'compare_at_price' => $data['compare_at_price'] ?: null,

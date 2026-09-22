@@ -69,6 +69,22 @@ function reserved_shop_slug(string $slug): bool
 }
 
 
+
+function normalize_phone(string $phone): string
+{
+    $phone = preg_replace('/[^0-9+]/', '', trim($phone)) ?? '';
+    if (str_starts_with($phone, '+254')) return '254' . substr($phone, 4);
+    if (str_starts_with($phone, '254')) return $phone;
+    if (str_starts_with($phone, '0') && strlen($phone) === 10) return '254' . substr($phone, 1);
+    return ltrim($phone, '+');
+}
+
+function whatsapp_url(string $phone, string $message = ''): string
+{
+    $number = normalize_phone($phone);
+    return 'https://wa.me/' . rawurlencode($number) . ($message !== '' ? '?text=' . rawurlencode($message) : '');
+}
+
 function store_product_image(array $file, int $shopId): ?string
 {
     if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {

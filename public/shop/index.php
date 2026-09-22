@@ -1,9 +1,6 @@
 <?php
-
 declare(strict_types=1);
-
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
-
 use App\Bootstrap\App;
 use App\Database\Database;
 use App\Modules\Categories\CategoryRepository;
@@ -11,156 +8,61 @@ use App\Modules\Products\ProductRepository;
 use App\Modules\Shops\ShopRepository;
 use function App\Support\e;
 use function App\Support\shop_url;
-
 new App();
-
 $slug = trim((string)($_GET['slug'] ?? ''));
 $db = Database::connection();
-
 $stmt = $db->prepare('SELECT id FROM shops WHERE slug = :slug AND status = "active" LIMIT 1');
 $stmt->execute(['slug' => $slug]);
 $shopId = (int)($stmt->fetchColumn() ?: 0);
-
-if (!$shopId) {
-    http_response_code(404);
-    echo 'Shop not found';
-    exit;
-}
-
+if (!$shopId) { http_response_code(404); echo 'Shop not found'; exit; }
 $shop = (new ShopRepository($db))->find($shopId);
-$publicUrl = shop_url($slug);
 $products = (new ProductRepository($db))->allForShop($shopId, 'active');
 $categories = (new CategoryRepository($db))->allForShop($shopId, true);
-
 $selectedCategory = (int)($_GET['category'] ?? 0);
-if ($selectedCategory) {
-    $products = array_values(array_filter($products, fn($p) => (int)$p['category_id'] === $selectedCategory));
-}
-
-ob_start();
-?>
-<div class="storefront">
-    <header class="storefront-header">
-        <div class="container py-4">
-            <div class="d-flex align-items-center justify-content-between gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="store-logo">
-                        <?php if (!empty($shop['logo_path'])): ?>
-                            <img src="<?= e($shop['logo_path']) ?>" alt="<?= e($shop['name']) ?> logo">
-                        <?php else: ?>
-                            <span><?= e(strtoupper(substr($shop['name'], 0, 1))) ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <div>
-                    <div class="store-name"><?= e($shop['name']) ?></div>
-                    <?php if ($shop['description']): ?>
-                        <div class="small text-secondary mt-1"><?= e($shop['description']) ?></div>
-                    <?php else: ?>
-                        <div class="small text-secondary mt-1"><?= e($shop['business_type'] ?: 'Online shop') ?></div>
-                    <?php endif; ?>
-                    </div>
-                </div>
-
-                <button class="store-cart-button" type="button" data-cart-button>
-                    🛒 <span data-cart-count>0</span>
-                </button>
+if ($selectedCategory) $products = array_values(array_filter($products, fn($p) => (int)$p['category_id'] === $selectedCategory));
+$currency = $shop['currency'] ?: 'KES';
+ob_start(); ?>
+<div class="customer-store" data-store-page>
+    <header class="customer-store-header">
+        <div class="customer-container">
+            <div class="customer-store-top">
+                <a href="<?= e(shop_url($slug)) ?>" class="customer-brand">
+                    <span class="customer-logo">
+                        <?php if (!empty($shop['logo_path'])): ?><img src="<?= e($shop['logo_path']) ?>" alt="<?= e($shop['name']) ?>"><?php else: ?><span><?= e(strtoupper(substr($shop['name'], 0, 1))) ?></span><?php endif; ?>
+                    </span>
+                    <span class="customer-brand-copy"><strong><?= e($shop['name']) ?></strong><small><?= e($shop['business_type'] ?: 'Online shop') ?></small></span>
+                </a>
+                <a class="customer-cart" href="/cart?shop=<?= e($slug) ?>" aria-label="View cart"><span class="cart-icon">🛒</span><span class="cart-label">Cart</span><b data-cart-count>0</b></a>
             </div>
-
-            <div class="store-search mt-4">
-                <span>⌕</span>
-                <input type="search" placeholder="Search products..." data-store-search>
-            </div>
-
-            <?php if ($categories): ?>
-                <div class="category-scroller mt-3">
-                    <a href="?slug=<?= e($slug) ?>" class="category-chip <?= !$selectedCategory ? 'active' : '' ?>">All</a>
-                    <?php foreach ($categories as $category): ?>
-                        <a href="?slug=<?= e($slug) ?>&category=<?= (int)$category['id'] ?>"
-                           class="category-chip <?= $selectedCategory === (int)$category['id'] ? 'active' : '' ?>">
-                            <?= e($category['name']) ?>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+            <?php if (!empty($shop['description'])): ?><p class="customer-store-description"><?= e($shop['description']) ?></p><?php endif; ?>
+            <div class="customer-search"><span>⌕</span><input type="search" placeholder="Search products..." data-store-search aria-label="Search products"></div>
+            <?php if ($categories): ?><div class="customer-category-scroller"><a href="<?= e(shop_url($slug)) ?>" class="customer-chip <?= !$selectedCategory ? 'active' : '' ?>">All</a><?php foreach($categories as $category): ?><a href="<?= e(shop_url($slug)) ?>?category=<?= (int)$category['id'] ?>" class="customer-chip <?= $selectedCategory === (int)$category['id'] ? 'active' : '' ?>"><?= e($category['name']) ?></a><?php endforeach; ?></div><?php endif; ?>
         </div>
     </header>
 
-    <main class="container py-4 pb-5">
-        <div class="d-flex justify-content-between align-items-end mb-3">
-            <div>
-                <div class="eyebrow">SHOP COLLECTION</div>
-                <h1 class="h4 fw-bold mt-1 mb-0"><?= e($selectedCategory ? 'Products' : 'All products') ?></h1>
-            </div>
-            <span class="small text-secondary"><?= count($products) ?> items</span>
-        </div>
-
-        <?php if (!$products): ?>
-            <div class="store-empty">
-                <div class="empty-icon">◇</div>
-                <h2 class="h5 fw-bold">Nothing here yet</h2>
-                <p class="text-secondary">This shop hasn't added products to this collection.</p>
-            </div>
+    <main class="customer-container customer-main">
+        <div class="customer-section-heading"><div><span class="customer-eyebrow"><?= $selectedCategory ? 'COLLECTION' : 'WELCOME' ?></span><h1><?= e($selectedCategory ? 'Shop collection' : 'Explore our products') ?></h1></div><span class="customer-count"><?= count($products) ?> items</span></div>
+        <?php if (!$products): ?><div class="customer-empty"><div>◇</div><h2>No products yet</h2><p>This store hasn't added products to this collection.</p></div>
         <?php else: ?>
-            <div class="row g-3 g-md-4">
-                <?php foreach ($products as $product): ?>
-                    <div class="col-6 col-md-4 col-lg-3 store-product" data-name="<?= e(strtolower($product['name'])) ?>">
-                        <article class="store-product-card">
-                            <div class="store-product-image <?= $product['image_path'] ? '' : 'placeholder' ?>">
-                                <?php if ($product['image_path']): ?>
-                                    <img src="<?= e($product['image_path']) ?>" alt="<?= e($product['name']) ?>">
-                                <?php else: ?>
-                                    <span>◇</span>
-                                <?php endif; ?>
-                                <?php if ($product['featured']): ?>
-                                    <span class="featured-pill">Featured</span>
-                                <?php endif; ?>
-                            </div>
-
-                            <div class="pt-3">
-                                <div class="small text-secondary"><?= e($product['category_name'] ?: 'Shop') ?></div>
-                                <h2 class="h6 fw-bold mt-1 mb-1 product-title"><?= e($product['name']) ?></h2>
-                                <div class="d-flex justify-content-between align-items-center gap-2">
-                                    <div>
-                                        <span class="fw-bold">KSh <?= number_format((float)$product['price'], 2) ?></span>
-                                        <?php if ($product['compare_at_price']): ?>
-                                            <span class="small text-secondary text-decoration-line-through ms-1">
-                                                KSh <?= number_format((float)$product['compare_at_price'], 2) ?>
-                                            </span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <button
-                                        class="add-cart-button"
-                                        type="button"
-                                        data-add-cart
-                                        data-product-id="<?= (int)$product['id'] ?>"
-                                        data-product-name="<?= e($product['name']) ?>"
-                                        data-product-price="<?= e((string)$product['price']) ?>"
-                                    >+</button>
-                                </div>
-                            </div>
-                        </article>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
+        <div class="customer-grid">
+        <?php foreach($products as $product): $options = json_decode($product['options_json'] ?? '[]', true) ?: []; $hasOptions = count($options)>0; ?>
+            <article class="customer-product-card store-product" data-name="<?= e(strtolower($product['name'])) ?>">
+                <a class="customer-product-media" href="<?= e(shop_url($slug)) ?>/product/<?= e($product['slug']) ?>">
+                    <?php if ($product['image_path']): ?><img src="<?= e($product['image_path']) ?>" alt="<?= e($product['name']) ?>" loading="lazy"><?php else: ?><span>◇</span><?php endif; ?>
+                    <?php if ($product['featured']): ?><span class="customer-badge">Featured</span><?php endif; ?>
+                    <?php if ($product['compare_at_price'] && (float)$product['compare_at_price'] > (float)$product['price']): ?><span class="customer-sale-badge">Sale</span><?php endif; ?>
+                </a>
+                <div class="customer-product-body">
+                    <div class="customer-product-category"><?= e($product['category_name'] ?: 'Product') ?></div>
+                    <a href="<?= e(shop_url($slug)) ?>/product/<?= e($product['slug']) ?>" class="customer-product-title"><?= e($product['name']) ?></a>
+                    <?php if (!empty($product['description'])): ?><p class="customer-product-description"><?= e($product['description']) ?></p><?php endif; ?>
+                    <div class="customer-product-bottom"><div><strong><?= e($currency) ?> <?= number_format((float)$product['price'], 2) ?></strong><?php if ($product['compare_at_price']): ?><del><?= e($currency) ?> <?= number_format((float)$product['compare_at_price'], 2) ?></del><?php endif; ?></div>
+                    <?php if ($hasOptions): ?><a class="customer-add-button customer-add-link" href="<?= e(shop_url($slug)) ?>/product/<?= e($product['slug']) ?>">Choose</a><?php else: ?><button class="customer-add-button" type="button" data-add-cart data-product-id="<?= (int)$product['id'] ?>" data-product-name="<?= e($product['name']) ?>" data-product-price="<?= e((string)$product['price']) ?>" data-product-image="<?= e((string)$product['image_path']) ?>" data-product-slug="<?= e($product['slug']) ?>">+</button><?php endif; ?></div>
+                </div>
+            </article>
+        <?php endforeach; ?></div><?php endif; ?>
     </main>
-
-    <div class="floating-cart" data-floating-cart hidden>
-        <div>
-            <div class="small text-white-50">Your cart</div>
-            <strong><span data-cart-count>0</span> items</strong>
-        </div>
-        <button type="button" class="btn btn-light btn-sm fw-bold">View cart →</button>
-    </div>
+    <div class="customer-cart-toast" data-floating-cart hidden><div><small>Cart</small><strong><span data-cart-count>0</span> items · <span data-cart-total>0</span></strong></div><a href="/cart?shop=<?= e($slug) ?>">View cart →</a></div>
 </div>
-
-<script>
-window.DUKAME_STORE = {
-    slug: <?= json_encode($slug) ?>
-};
-</script>
-<?php
-$content = ob_get_clean();
-$title = $shop['name'];
-
-require dirname(__DIR__, 2) . '/app/Views/layouts/app.php';
+<script>window.DUKAME_STORE=<?= json_encode(['slug'=>$slug,'currency'=>$currency], JSON_UNESCAPED_SLASHES) ?>;</script>
+<?php $content=ob_get_clean(); $title=$shop['name']; require dirname(__DIR__,2).'/app/Views/layouts/customer.php';

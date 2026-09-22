@@ -6,6 +6,7 @@ require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 use App\Bootstrap\App;
 use App\Database\Database;
+use App\Modules\Shops\ShopRepository;
 use App\Modules\Products\ProductRepository;
 use App\Support\Session;
 use App\Support\Auth;
@@ -18,22 +19,31 @@ $db = Database::connection();
 $merchant = Auth::requireMerchant($db);
 $shopId = (int)$merchant['id'];
 
-$products = (new ProductRepository(Database::connection()))->allForShop($shopId);
+$productRepo = new ProductRepository($db);
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::verify($_POST['_csrf'] ?? null)) {
+        Session::flash('error', 'Your form session expired. Please try again.');
+    } elseif (($_POST['action'] ?? '') === 'delete') {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $productRepo->delete($id, $shopId);
+            Session::flash('success', 'Product deleted.');
+        }
+    }
+    header('Location: /products');
+    exit;
+}
+
+
+$products = $productRepo->allForShop($shopId);
+
+$merchantShop = $shop ?? (new ShopRepository($db))->find($shopId);
+$merchantSection = 'products';
 ob_start();
 ?>
 <div class="merchant-shell">
-    <aside class="merchant-sidebar d-none d-lg-flex">
-        <a href="/dashboard" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
-        <div class="small text-uppercase text-secondary fw-bold mb-2">Shop</div>
-        <nav class="merchant-nav">
-            <a href="/dashboard"><span>▦</span> Overview</a>
-            <a class="active" href="/products"><span>◫</span> Products</a>
-            <a href="/categories"><span>◇</span> Categories</a>
-            <a href="#"><span>▣</span> Orders</a>
-            <a href="#"><span>◉</span> Customers</a>
-        </nav>
-    </aside>
+    <?php require dirname(__DIR__, 2) . '/app/Views/components/merchant-sidebar.php'; ?>
 
     <main class="merchant-main">
         <div class="merchant-topbar">
@@ -106,4 +116,5 @@ ob_start();
 <?php
 $content = ob_get_clean();
 $title = 'Products';
+$merchantLayout = true;
 require dirname(__DIR__, 2) . '/app/Views/layouts/app.php';

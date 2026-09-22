@@ -3,14 +3,13 @@ use function App\Support\e;
 use function App\Support\asset_url;
 $title = $title ?? 'Dukame';
 $content = $content ?? '';
-$merchantLayout = $merchantLayout ?? false;
 $brand = require dirname(__DIR__, 3) . '/config/branding.php';
 ?>
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title><?= e($title) ?> · <?= e($brand['name']) ?></title>
     <meta name="description" content="<?= e($brand['tagline']) ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -18,22 +17,8 @@ $brand = require dirname(__DIR__, 3) . '/config/branding.php';
     <link rel="stylesheet" href="<?= e(asset_url('/assets/css/app.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset_url('/assets/css/components.css')) ?>">
 </head>
-<body class="<?= $merchantLayout ? 'merchant-app-body' : '' ?>">
-<?php if (!$merchantLayout): ?>
-    <?php require __DIR__ . '/../components/navbar.php'; ?>
-<?php endif; ?>
-
-<main><?= $content ?></main>
-
-<?php if (!$merchantLayout): ?>
-    <footer class="site-footer">
-        <div class="container py-4 d-flex flex-column flex-md-row justify-content-between gap-2">
-            <span class="small text-secondary">© <?= date('Y') ?> <?= e($brand['name']) ?></span>
-            <span class="small text-secondary"><?= e($brand['tagline']) ?></span>
-        </div>
-    </footer>
-<?php endif; ?>
-
+<body class="customer-body">
+<?= $content ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= e(asset_url('/assets/js/app.js')) ?>"></script>
 </body>

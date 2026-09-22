@@ -166,3 +166,138 @@ Merchants can upload a store logo and configure currency, M-Pesa phone, Cash on 
 
 ### Merchant dashboard
 The dashboard is intentionally lightweight: it shows shop status, catalogue counts, recent products, the public shop link, and a compact setup checklist. Orders and customers will appear when those modules are implemented.
+
+
+## API v1
+
+Dukame now has a versioned JSON API at `/api/v1`. The existing clean web URLs remain unchanged.
+
+### Authentication
+
+```text
+POST /api/v1/auth/login
+GET  /api/v1/auth/me
+POST /api/v1/auth/logout
+```
+
+Login returns a Bearer token. Send it on protected requests:
+
+```text
+Authorization: Bearer <token>
+```
+
+### Merchant API
+
+```text
+GET  /api/v1/shop
+PUT  /api/v1/shop
+PUT  /api/v1/shop/slug
+PUT  /api/v1/shop/settings
+
+GET    /api/v1/products
+POST   /api/v1/products
+GET    /api/v1/products/{id}
+PUT    /api/v1/products/{id}
+DELETE /api/v1/products/{id}
+
+GET    /api/v1/categories
+POST   /api/v1/categories
+PUT    /api/v1/categories/{id}
+DELETE /api/v1/categories/{id}
+```
+
+### Public Store API
+
+```text
+GET /api/v1/stores/{slug}
+```
+
+For example:
+
+```text
+GET /api/v1/stores/jazafurnitures
+```
+
+The API uses a standard response envelope:
+
+```json
+{
+  "success": true,
+  "data": {}
+}
+```
+
+Errors use:
+
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Authentication required.",
+    "code": "unauthenticated"
+  }
+}
+```
+
+API authentication uses opaque, hashed bearer tokens stored in `api_tokens`; plaintext tokens are only returned at login.
+
+## API v1
+
+Dukame exposes a versioned JSON API under `/api/v1`. The public storefront URLs remain clean (for example `/jazafurnitures`), while application clients use the API contract.
+
+Core endpoints currently include:
+
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/logout`
+- `GET|PUT /api/v1/shop`
+- `PUT /api/v1/shop/slug`
+- `PUT /api/v1/shop/settings`
+- `GET|POST /api/v1/products`
+- `GET|PUT|DELETE /api/v1/products/{id}`
+- `GET|POST /api/v1/categories`
+- `PUT|DELETE /api/v1/categories/{id}`
+- `GET /api/v1/stores/{slug}`
+
+Protected endpoints use `Authorization: Bearer <token>`.
+
+## Merchant Orders & Customers
+
+The merchant application now includes:
+
+- `/orders` — order list with status filters and summary counts.
+- `/orders/view?id=...` — order details and status updates.
+- `/customers` — customers created from orders.
+- `/customers/view?id=...` — customer details and order history.
+
+Shop settings now include:
+
+- Order number prefix (for example `DK`).
+- Next order number (for example `1001`, producing `DK-01001`).
+- WhatsApp number used for customer order links.
+
+Migration `006_create_orders_customers.sql` creates customers, orders and order items and adds these shop settings.
+
+### API v1 commerce endpoints
+
+- `POST /api/v1/orders` — public order creation for a store.
+- `POST /api/v1/orders/track` — public order tracking using order number + phone; no customer login.
+- `GET /api/v1/orders` — authenticated merchant orders.
+- `GET /api/v1/orders/{id}` — authenticated merchant order details.
+- `PUT /api/v1/orders/{id}/status` — authenticated merchant status update.
+- `GET /api/v1/customers` — authenticated merchant customers.
+- `GET /api/v1/customers/{id}` — authenticated merchant customer details.
+
+## Customer storefront
+
+The public storefront is mobile-first and uses the versioned API for commerce actions. Customers do not need accounts.
+
+- `/{shop-slug}` — public store
+- `/{shop-slug}/product/{product-slug}` — product details
+- `/cart` — cart for the active shop
+- `/checkout` — guest checkout
+- `/track` — order tracking by order number + phone
+
+Adding to cart never redirects the customer away from the product list. The cart badge/floating cart updates immediately. Products may define optional choices such as `Small, Medium, Large, XL`; these are selected on the product page and stored with the order.
+
+Orders are created through `POST /api/v1/orders`. When the shop has a WhatsApp number configured, the customer can open a pre-filled WhatsApp order message. Dukame does not require WhatsApp/Meta API access for this flow.

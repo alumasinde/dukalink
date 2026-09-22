@@ -1,38 +1,32 @@
 RewriteEngine On
 
-# Do not rewrite real files/directories.
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Clean application routes.
+RewriteRule ^api/v1(?:/.*)?$ api.php [L,QSA]
+
 RewriteRule ^$ index.php [L]
 RewriteRule ^login/?$ login.php [L,QSA]
 RewriteRule ^logout/?$ logout.php [L,QSA]
 RewriteRule ^register/?$ register.php [L,QSA]
 RewriteRule ^onboarding/?$ onboarding.php [L,QSA]
 RewriteRule ^onboarding/complete/?$ onboarding-complete.php [L,QSA]
-
 RewriteRule ^dashboard/?$ dashboard/index.php [L,QSA]
-
 RewriteRule ^products/?$ products/index.php [L,QSA]
 RewriteRule ^products/create/?$ products/create.php [L,QSA]
 RewriteRule ^products/edit/?$ products/edit.php [L,QSA]
-
 RewriteRule ^categories/?$ categories/index.php [L,QSA]
-
+RewriteRule ^orders/?$ orders/index.php [L,QSA]
+RewriteRule ^orders/view/?$ orders/view.php [L,QSA]
+RewriteRule ^customers/?$ customers/index.php [L,QSA]
+RewriteRule ^customers/view/?$ customers/view.php [L,QSA]
 RewriteRule ^settings/?$ settings/index.php [L,QSA]
 RewriteRule ^settings/shop/?$ settings/shop.php [L,QSA]
-
-# Legacy storefront URLs redirect to the clean root-level merchant URL.
-# Example: /shop/pendeaboutique -> /pendeaboutique
-RewriteRule ^shop/([a-z0-9]+(?:-[a-z0-9]+)*)/?$ /$1 [R=301,L,NE]
-
-# Public merchant storefront: /{merchant-link}
-# Reserved application routes above are matched first.
-RewriteRule ^([a-z0-9]+(?:-[a-z0-9]+)*)/?$ shop/index.php?slug=$1 [L,QSA]
-
-# Optional short aliases for future customer pages.
 RewriteRule ^cart/?$ cart/index.php [L,QSA]
 RewriteRule ^checkout/?$ checkout/index.php [L,QSA]
 RewriteRule ^track/?$ track/index.php [L,QSA]
+RewriteRule ^([a-z0-9]+(?:-[a-z0-9]+)*)/product/([a-z0-9]+(?:-[a-z0-9]+)*)/?$ shop/product.php?slug=$1&product=$2 [L,QSA]
+
+RewriteRule ^shop/([a-z0-9]+(?:-[a-z0-9]+)*)/?$ /$1 [R=301,L,NE]
+RewriteRule ^([a-z0-9]+(?:-[a-z0-9]+)*)/?$ shop/index.php?slug=$1 [L,QSA]

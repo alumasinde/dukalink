@@ -6,6 +6,7 @@ require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 use App\Bootstrap\App;
 use App\Database\Database;
+use App\Modules\Shops\ShopRepository;
 use App\Modules\Categories\CategoryRepository;
 use App\Modules\Products\ProductRepository;
 use App\Support\Csrf;
@@ -44,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'name' => $name,
                     'slug' => $slug . '-' . substr(bin2hex(random_bytes(3)), 0, 6),
                     'description' => trim((string)($_POST['description'] ?? '')),
+                    'options_json' => json_encode(array_values(array_filter(array_map('trim', explode(',', (string)($_POST['options'] ?? ''))))), JSON_UNESCAPED_UNICODE),
                     'sku' => trim((string)($_POST['sku'] ?? '')),
                     'price' => $price,
                     'compare_at_price' => $_POST['compare_at_price'] ?? null,
@@ -64,17 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$merchantShop = $shop ?? (new ShopRepository($db))->find($shopId);
+$merchantSection = 'products';
 ob_start();
 ?>
 <div class="merchant-shell">
-    <aside class="merchant-sidebar d-none d-lg-flex">
-        <a href="/dashboard" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
-        <nav class="merchant-nav">
-            <a href="/dashboard"><span>▦</span> Overview</a>
-            <a class="active" href="/products"><span>◫</span> Products</a>
-            <a href="/categories"><span>◇</span> Categories</a>
-        </nav>
-    </aside>
+    <?php require dirname(__DIR__, 2) . '/app/Views/components/merchant-sidebar.php'; ?>
 
     <main class="merchant-main">
         <div class="merchant-topbar">
@@ -98,6 +95,12 @@ ob_start();
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Description</label>
                         <textarea class="form-control" name="description" rows="5" placeholder="Tell customers about this product..."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Options / sizes <span class="text-secondary">(optional)</span></label>
+                        <input class="form-control" name="options" placeholder="e.g. Small, Medium, Large, XL">
+                        <div class="form-text">Use this for sizes, colours, materials or other choices customers should select.</div>
                     </div>
 
                     <div class="row g-3">
@@ -169,4 +172,5 @@ ob_start();
 <?php
 $content = ob_get_clean();
 $title = 'Add product';
+$merchantLayout = true;
 require dirname(__DIR__, 2) . '/app/Views/layouts/app.php';

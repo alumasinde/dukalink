@@ -9,6 +9,8 @@ use App\Database\Database;
 use App\Modules\Products\ProductRepository;
 use App\Modules\Categories\CategoryRepository;
 use App\Modules\Shops\ShopRepository;
+use App\Modules\Orders\OrderRepository;
+use App\Modules\Customers\CustomerRepository;
 use App\Support\Auth;
 use function App\Support\e;
 
@@ -22,6 +24,10 @@ $shopRepo = new ShopRepository($db);
 $shop = $shopRepo->find($shopId);
 $products = (new ProductRepository($db))->allForShop($shopId);
 $categories = (new CategoryRepository($db))->allForShop($shopId);
+$orderRepo = new OrderRepository($db);
+$orderCounts = $orderRepo->countByStatus($shopId);
+$customerCount = count((new CustomerRepository($db))->allForShop($shopId));
+$orderCount = array_sum($orderCounts);
 
 if (!$shop) {
     http_response_code(404);
@@ -44,30 +50,13 @@ $setupPercent = (int) round(($setupComplete / $setupTotal) * 100);
 
 $recentProducts = array_slice($products, 0, 5);
 
+$merchantShop = $shop ?? (new App\Modules\Shops\ShopRepository($db))->find($shopId);
+$merchantShop = $shop;
+$merchantSection = 'overview';
 ob_start();
 ?>
 <div class="merchant-shell">
-    <aside class="merchant-sidebar d-none d-lg-flex">
-        <a href="/dashboard" class="brand-lockup mb-4">
-            <span class="brand-mark">D</span>
-            <span class="fw-bold">Dukame</span>
-        </a>
-
-        <div class="small text-uppercase text-secondary fw-bold mb-2">Shop</div>
-        <nav class="merchant-nav">
-            <a class="active" href="/dashboard"><span>▦</span> Overview</a>
-            <a href="/products"><span>◫</span> Products</a>
-            <a href="/categories"><span>◇</span> Categories</a>
-        </nav>
-
-        <div class="sidebar-bottom">
-            <a href="<?= e(\App\Support\shop_url($shop['slug'])) ?>" target="_blank" class="store-preview-link">
-                <span>↗</span> View my shop
-            </a>
-            <a href="/settings/shop" class="merchant-nav-link"><span>⚙</span> Settings</a>
-            <a href="/logout" class="merchant-nav-link"><span>↪</span> Log out</a>
-        </div>
-    </aside>
+    <?php require dirname(__DIR__, 2) . '/app/Views/components/merchant-sidebar.php'; ?>
 
     <main class="merchant-main dashboard-main">
         <div class="merchant-topbar dashboard-header">
@@ -106,25 +95,32 @@ ob_start();
         </section>
 
         <div class="row g-3 mt-1">
-            <div class="col-md-4">
+            <div class="col-6 col-xl-3">
                 <a href="/products" class="metric-card metric-card-link">
                     <div class="metric-label">Products</div>
                     <div class="metric-value"><?= count($products) ?></div>
                     <div class="metric-meta"><?= $activeProducts ?> live<?= $draftProducts ? ' · ' . $draftProducts . ' drafts' : '' ?></div>
                 </a>
             </div>
-            <div class="col-md-4">
+            <div class="col-6 col-xl-3">
                 <a href="/categories" class="metric-card metric-card-link">
                     <div class="metric-label">Categories</div>
                     <div class="metric-value"><?= count($categories) ?></div>
-                    <div class="metric-meta">Organize your catalogue</div>
+                    <div class="metric-meta">Catalogue groups</div>
                 </a>
             </div>
-            <div class="col-md-4">
-                <a href="/settings/shop" class="metric-card metric-card-link">
-                    <div class="metric-label">Store setup</div>
-                    <div class="metric-value"><?= $setupComplete ?>/<?= $setupTotal ?></div>
-                    <div class="metric-meta"><?= $setupPercent ?>% complete</div>
+            <div class="col-6 col-xl-3">
+                <a href="/orders" class="metric-card metric-card-link">
+                    <div class="metric-label">Orders</div>
+                    <div class="metric-value"><?= $orderCount ?></div>
+                    <div class="metric-meta"><?= $orderCounts['pending'] ?> awaiting confirmation</div>
+                </a>
+            </div>
+            <div class="col-6 col-xl-3">
+                <a href="/customers" class="metric-card metric-card-link">
+                    <div class="metric-label">Customers</div>
+                    <div class="metric-value"><?= $customerCount ?></div>
+                    <div class="metric-meta">From your orders</div>
                 </a>
             </div>
         </div>
@@ -222,4 +218,5 @@ ob_start();
 <?php
 $content = ob_get_clean();
 $title = 'Dashboard';
+$merchantLayout = true;
 require dirname(__DIR__, 2) . '/app/Views/layouts/app.php';

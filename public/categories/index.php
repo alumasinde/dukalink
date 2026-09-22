@@ -6,6 +6,7 @@ require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 use App\Bootstrap\App;
 use App\Database\Database;
+use App\Modules\Shops\ShopRepository;
 use App\Modules\Categories\CategoryRepository;
 use App\Support\Csrf;
 use App\Support\Session;
@@ -62,17 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $categories = $repo->allForShop($shopId);
 
+$merchantShop = $shop ?? (new ShopRepository($db))->find($shopId);
+$merchantSection = 'categories';
 ob_start();
 ?>
 <div class="merchant-shell">
-    <aside class="merchant-sidebar d-none d-lg-flex">
-        <a href="/dashboard" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
-        <nav class="merchant-nav">
-            <a href="/dashboard"><span>▦</span> Overview</a>
-            <a href="/products"><span>◫</span> Products</a>
-            <a class="active" href="/categories"><span>◇</span> Categories</a>
-        </nav>
-    </aside>
+    <?php require dirname(__DIR__, 2) . '/app/Views/components/merchant-sidebar.php'; ?>
 
     <main class="merchant-main">
         <div class="merchant-topbar">
@@ -146,4 +142,5 @@ ob_start();
 <?php
 $content = ob_get_clean();
 $title = 'Categories';
+$merchantLayout = true;
 require dirname(__DIR__, 2) . '/app/Views/layouts/app.php';

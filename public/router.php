@@ -13,6 +13,11 @@ declare(strict_types=1);
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = trim($uri, '/');
 
+if ($path === 'api/v1' || str_starts_with($path, 'api/v1/')) {
+    require __DIR__ . '/api.php';
+    return true;
+}
+
 if ($path !== '') {
     $candidate = __DIR__ . '/' . $path;
 
@@ -34,6 +39,10 @@ $routes = [
     'products/create' => 'products/create.php',
     'products/edit' => 'products/edit.php',
     'categories' => 'categories/index.php',
+    'orders' => 'orders/index.php',
+    'orders/view' => 'orders/view.php',
+    'customers' => 'customers/index.php',
+    'customers/view' => 'customers/view.php',
 
     'settings' => 'settings/index.php',
     'settings/shop' => 'settings/shop.php',
@@ -45,6 +54,13 @@ $routes = [
 
 if (isset($routes[$path])) {
     require __DIR__ . '/' . $routes[$path];
+    return true;
+}
+
+if (preg_match('#^([a-z0-9]+(?:-[a-z0-9]+)*)/product/([a-z0-9]+(?:-[a-z0-9]+)*)$#', $path, $m)) {
+    $_GET['slug'] = $m[1];
+    $_GET['product'] = $m[2];
+    require __DIR__ . '/shop/product.php';
     return true;
 }
 

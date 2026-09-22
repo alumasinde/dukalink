@@ -15,7 +15,7 @@ final class ShopRepository
     public function find(int $shopId): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT s.*, ss.currency, ss.mpesa_phone, ss.allow_cash_on_delivery,
+            'SELECT s.*, ss.currency, ss.order_number_prefix, ss.next_order_number, ss.whatsapp_number, ss.mpesa_phone, ss.allow_cash_on_delivery,
                     ss.mpesa_environment, ss.mpesa_shortcode, ss.mpesa_consumer_key,
                     ss.mpesa_consumer_secret, ss.mpesa_passkey
              FROM shops s
@@ -112,6 +112,9 @@ final class ShopRepository
         $stmt = $this->db->prepare(
             'UPDATE shop_settings
              SET currency = :currency,
+                 order_number_prefix = :order_number_prefix,
+                 next_order_number = :next_order_number,
+                 whatsapp_number = :whatsapp_number,
                  mpesa_phone = :mpesa_phone,
                  mpesa_environment = :mpesa_environment,
                  mpesa_shortcode = :mpesa_shortcode,
@@ -125,6 +128,9 @@ final class ShopRepository
             'shop_id' => $shopId,
             'currency' => $data['currency'],
             'mpesa_phone' => $data['mpesa_phone'] ?: null,
+            'whatsapp_number' => $data['whatsapp_number'] ?: null,
+            'order_number_prefix' => strtoupper(trim((string)($data['order_number_prefix'] ?? 'DK'))),
+            'next_order_number' => max(1, (int)($data['next_order_number'] ?? 1001)),
             'mpesa_environment' => $data['mpesa_environment'] ?? 'sandbox',
             'mpesa_shortcode' => $data['mpesa_shortcode'] ?: null,
             'mpesa_consumer_key' => $consumerKey,
@@ -132,6 +138,31 @@ final class ShopRepository
             'mpesa_passkey' => $passkey,
             'allow_cash_on_delivery' => !empty($data['allow_cash_on_delivery']) ? 1 : 0,
         ]);
+    }
+
+    public function reserveOrderNumber(int $shopId): string
+    {
+        $this->db->beginTransaction();
+        try {
+            $stmt = $this->db->prepare('SELECT order_number_prefix, next_order_number FROM shop_settings WHERE shop_id = :shop_id FOR UPDATE');
+            $stmt->execute(['shop_id' => $shopId]);
+            $settings = $stmt->fetch();
+            if (!$settings) {
+                throw new \RuntimeException('Shop settings not found.');
+            }
+
+            $prefix = strtoupper(trim((string)($settings['order_number_prefix'] ?? 'DK')));
+            $next = max(1, (int)($settings['next_order_number'] ?? 1001));
+            $number = $prefix . '-' . str_pad((string)$next, 5, '0', STR_PAD_LEFT);
+
+            $update = $this->db->prepare('UPDATE shop_settings SET next_order_number = :next_order_number WHERE shop_id = :shop_id');
+            $update->execute(['next_order_number' => $next + 1, 'shop_id' => $shopId]);
+            $this->db->commit();
+            return $number;
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
     }
 
     public function updateLogo(int $shopId, ?string $logoPath): void

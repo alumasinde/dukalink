@@ -74,17 +74,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!in_array($currency, $allowedCurrencies, true)) {
                 Session::flash('error', 'Please select a supported currency.');
             } else {
-                $repo->updateSettings($shopId, [
-                    'currency' => $currency,
-                    'mpesa_phone' => $mpesaPhone,
-                    'mpesa_environment' => $_POST['mpesa_environment'] ?? 'sandbox',
-                    'mpesa_shortcode' => trim((string)($_POST['mpesa_shortcode'] ?? '')),
-                    'mpesa_consumer_key' => trim((string)($_POST['mpesa_consumer_key'] ?? '')),
-                    'mpesa_consumer_secret' => trim((string)($_POST['mpesa_consumer_secret'] ?? '')),
-                    'mpesa_passkey' => trim((string)($_POST['mpesa_passkey'] ?? '')),
-                    'allow_cash_on_delivery' => isset($_POST['allow_cash_on_delivery']),
-                ]);
-                Session::flash('success', 'Payment settings updated.');
+                $orderPrefix = strtoupper(trim((string)($_POST['order_number_prefix'] ?? 'DK')));
+                $nextOrderNumber = (int)($_POST['next_order_number'] ?? 1001);
+                $whatsappNumber = trim((string)($_POST['whatsapp_number'] ?? ''));
+                if ($orderPrefix === '' || !preg_match('/^[A-Z0-9]{1,12}$/', $orderPrefix)) {
+                    Session::flash('error', 'Order number prefix must contain 1–12 letters or numbers.');
+                } elseif ($nextOrderNumber < 1) {
+                    Session::flash('error', 'Next order number must be at least 1.');
+                } else {
+                    $repo->updateSettings($shopId, [
+                        'currency' => $currency,
+                        'order_number_prefix' => $orderPrefix,
+                        'next_order_number' => $nextOrderNumber,
+                        'whatsapp_number' => $whatsappNumber,
+                        'mpesa_phone' => $mpesaPhone,
+                        'mpesa_environment' => $_POST['mpesa_environment'] ?? 'sandbox',
+                        'mpesa_shortcode' => trim((string)($_POST['mpesa_shortcode'] ?? '')),
+                        'mpesa_consumer_key' => trim((string)($_POST['mpesa_consumer_key'] ?? '')),
+                        'mpesa_consumer_secret' => trim((string)($_POST['mpesa_consumer_secret'] ?? '')),
+                        'mpesa_passkey' => trim((string)($_POST['mpesa_passkey'] ?? '')),
+                        'allow_cash_on_delivery' => isset($_POST['allow_cash_on_delivery']),
+                    ]);
+                    Session::flash('success', 'Payment and order settings updated.');
+                }
             }
         } else {
             $name = trim((string)($_POST['name'] ?? ''));
@@ -112,21 +124,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $shop = $repo->find($shopId);
 
+$merchantShop = $shop ?? (new ShopRepository($db))->find($shopId);
+$merchantSection = 'settings';
 ob_start();
 ?>
 <div class="merchant-shell">
-    <aside class="merchant-sidebar d-none d-lg-flex">
-        <a href="/dashboard" class="brand-lockup mb-4"><span class="brand-mark">D</span><span class="fw-bold">Dukame</span></a>
-        <nav class="merchant-nav">
-            <a href="/dashboard"><span>▦</span> Overview</a>
-            <a href="/products"><span>◫</span> Products</a>
-            <a href="/categories"><span>◇</span> Categories</a>
-            <a class="active" href="/settings/shop"><span>⚙</span> Settings</a>
-        </nav>
-        <div class="sidebar-bottom">
-            <a href="<?= e(\App\Support\shop_url($shop['slug'])) ?>" target="_blank" class="store-preview-link"><span>↗</span> View my shop</a>
-        </div>
-    </aside>
+    <?php require dirname(__DIR__, 2) . '/app/Views/components/merchant-sidebar.php'; ?>
 
     <main class="merchant-main">
         <div class="merchant-topbar">
@@ -245,6 +248,23 @@ ob_start();
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Order number prefix</label>
+                                <input class="form-control" name="order_number_prefix" value="<?=e($shop['order_number_prefix'] ?? 'DK')?>" maxlength="12" pattern="[A-Za-z0-9]{1,12}" required>
+                                <div class="form-text">Example: DK → DK-01001.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Next order number</label>
+                                <input class="form-control" type="number" name="next_order_number" value="<?=e($shop['next_order_number'] ?? 1001)?>" min="1" required>
+                                <div class="form-text">Used for the next new order.</div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">WhatsApp number</label>
+                            <input class="form-control" name="whatsapp_number" value="<?=e($shop['whatsapp_number'] ?? '')?>" placeholder="0712 345 678">
+                            <div class="form-text">Customers will use this number to send orders on WhatsApp. No Meta API setup is required.</div>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">M-Pesa phone</label>
                             <input class="form-control" name="mpesa_phone" value="<?=e($shop['mpesa_phone'] ?? '')?>" placeholder="0712 345 678">
@@ -301,4 +321,5 @@ ob_start();
 <?php
 $content = ob_get_clean();
 $title = 'Shop settings';
+$merchantLayout = true;
 require dirname(__DIR__, 2) . '/app/Views/layouts/app.php';
