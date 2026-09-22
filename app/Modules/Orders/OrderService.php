@@ -14,11 +14,23 @@ final class OrderService
 
     public function create(int $shopId, array $data): array
     {
-        $name = trim((string)($data['customer_name'] ?? ''));
+        $firstName = trim((string)($data['first_name'] ?? ''));
+        $lastName = trim((string)($data['last_name'] ?? ''));
+        $name = trim($firstName . ' ' . $lastName);
         $phone = normalize_phone((string)($data['customer_phone'] ?? ''));
+        $email = trim((string)($data['customer_email'] ?? ''));
         $items = is_array($data['items'] ?? null) ? $data['items'] : [];
-        if ($name === '' || $phone === '' || !$items) {
-            throw new \InvalidArgumentException('Customer name, phone and at least one item are required.');
+        if ($firstName === '' || $lastName === '' || !$items) {
+            throw new \InvalidArgumentException('First name, last name and at least one item are required.');
+        }
+        if (mb_strlen($firstName) > 100 || mb_strlen($lastName) > 100) {
+            throw new \InvalidArgumentException('Names must be 100 characters or fewer.');
+        }
+        if ($phone === '' || !preg_match('/^254\\d{9}$/', $phone)) {
+            throw new \InvalidArgumentException('Enter a valid Kenyan phone number.');
+        }
+        if ($email !== '' && (mb_strlen($email) > 190 || !filter_var($email, FILTER_VALIDATE_EMAIL))) {
+            throw new \InvalidArgumentException('Enter a valid email address or leave it blank.');
         }
 
         $shopRepo = new ShopRepository($this->db);
@@ -27,7 +39,7 @@ final class OrderService
 
         $this->db->beginTransaction();
         try {
-            $customer = $this->findOrCreateCustomer($shopId, $name, $phone, $data['customer_email'] ?? null);
+            $customer = $this->findOrCreateCustomer($shopId, $firstName, $lastName, $phone, $email);
             $orderNumber = $this->reserveOrderNumberInTransaction($shopId);
             $subtotal = 0.0;
             $resolvedItems = [];
@@ -52,23 +64,31 @@ final class OrderService
 
             $deliveryFee = max(0, (float)($data['delivery_fee'] ?? 0));
             $total = $subtotal + $deliveryFee;
+            $orderChannel = in_array(($data['order_channel'] ?? 'web'), ['web', 'whatsapp'], true) ? $data['order_channel'] : 'web';
+            $paymentMethod = in_array(($data['payment_method'] ?? 'cash_on_delivery'), ['cash_on_delivery', 'mpesa'], true)
+                ? $data['payment_method']
+                : 'cash_on_delivery';
+
             $stmt = $this->db->prepare('INSERT INTO orders
-                (shop_id, customer_id, order_number, customer_name, customer_phone, customer_email, delivery_address, notes, currency, subtotal, delivery_fee, total, payment_method, status)
-                VALUES (:shop_id, :customer_id, :order_number, :customer_name, :customer_phone, :customer_email, :delivery_address, :notes, :currency, :subtotal, :delivery_fee, :total, :payment_method, "pending")');
+                (shop_id, customer_id, customer_first_name, customer_last_name, order_number, customer_name, customer_phone, customer_email, delivery_address, notes, currency, subtotal, delivery_fee, total, payment_method, order_channel, status)
+                VALUES (:shop_id, :customer_id, :first_name, :last_name, :order_number, :customer_name, :customer_phone, :customer_email, :delivery_address, :notes, :currency, :subtotal, :delivery_fee, :total, :payment_method, :order_channel, "pending")');
             $stmt->execute([
                 'shop_id' => $shopId,
                 'customer_id' => $customer['id'],
+                'first_name' => $firstName,
+                'last_name' => $lastName,
                 'order_number' => $orderNumber,
                 'customer_name' => $name,
                 'customer_phone' => $phone,
-                'customer_email' => trim((string)($data['customer_email'] ?? '')) ?: null,
+                'customer_email' => $email ?: null,
                 'delivery_address' => trim((string)($data['delivery_address'] ?? '')) ?: null,
                 'notes' => trim((string)($data['notes'] ?? '')) ?: null,
                 'currency' => $shop['currency'] ?? 'KES',
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,
                 'total' => $total,
-                'payment_method' => in_array(($data['payment_method'] ?? 'whatsapp'), ['whatsapp','mpesa','cash_on_delivery'], true) ? $data['payment_method'] : 'whatsapp',
+                'payment_method' => $paymentMethod,
+                'order_channel' => $orderChannel,
             ]);
             $orderId = (int)$this->db->lastInsertId();
             $itemStmt = $this->db->prepare('INSERT INTO order_items (order_id, product_id, product_name, selected_options, sku, quantity, unit_price, line_total) VALUES (:order_id, :product_id, :product_name, :selected_options, :sku, :quantity, :unit_price, :line_total)');
@@ -93,19 +113,18 @@ final class OrderService
         }
     }
 
-    private function findOrCreateCustomer(int $shopId, string $name, string $phone, ?string $email): array
+    private function findOrCreateCustomer(int $shopId, string $firstName, string $lastName, string $phone, ?string $email): array
     {
         $stmt = $this->db->prepare('SELECT * FROM customers WHERE shop_id = :shop_id AND phone = :phone LIMIT 1');
         $stmt->execute(['shop_id' => $shopId, 'phone' => $phone]);
         $existing = $stmt->fetch();
-        [$first, $last] = $this->splitName($name);
         if ($existing) {
             $update = $this->db->prepare('UPDATE customers SET first_name = :first_name, last_name = :last_name, email = :email WHERE id = :id AND shop_id = :shop_id');
-            $update->execute(['first_name'=>$first,'last_name'=>$last,'email'=>trim((string)$email) ?: ($existing['email'] ?? null),'id'=>$existing['id'],'shop_id'=>$shopId]);
+            $update->execute(['first_name'=>$firstName,'last_name'=>$lastName,'email'=>$email ?: ($existing['email'] ?? null),'id'=>$existing['id'],'shop_id'=>$shopId]);
             return $existing;
         }
         $insert = $this->db->prepare('INSERT INTO customers (shop_id, first_name, last_name, phone, email) VALUES (:shop_id,:first_name,:last_name,:phone,:email)');
-        $insert->execute(['shop_id'=>$shopId,'first_name'=>$first,'last_name'=>$last,'phone'=>$phone,'email'=>trim((string)$email) ?: null]);
+        $insert->execute(['shop_id'=>$shopId,'first_name'=>$firstName,'last_name'=>$lastName,'phone'=>$phone,'email'=>$email ?: null]);
         $id = (int)$this->db->lastInsertId();
         return ['id'=>$id,'phone'=>$phone];
     }
@@ -130,11 +149,4 @@ final class OrderService
         return $number;
     }
 
-    private function splitName(string $name): array
-    {
-        $parts = preg_split('/\s+/', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        $first = $parts[0] ?? '';
-        $last = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : null;
-        return [$first, $last];
-    }
 }

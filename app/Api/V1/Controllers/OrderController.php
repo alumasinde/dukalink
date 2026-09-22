@@ -11,6 +11,8 @@ use App\Database\Database;
 use App\Modules\Customers\CustomerRepository;
 use App\Modules\Orders\OrderRepository;
 use App\Modules\Orders\OrderService;
+use App\Modules\Notifications\NotificationService;
+use App\Modules\Payments\MpesaService;
 use App\Modules\Shops\ShopRepository;
 use function App\Support\normalize_phone;
 use function App\Support\whatsapp_url;
@@ -36,10 +38,20 @@ final class OrderController
     {
         $shop = self::merchantShop();
         $status = (string)(Request::json()['status'] ?? '');
-        if (!(new OrderRepository(Database::connection()))->updateStatus($id, (int)$shop['id'], $status)) {
+        $db = Database::connection();
+        $repo = new OrderRepository($db);
+        $before = $repo->findForShop($id, (int)$shop['id']);
+        if (!$before) JsonResponse::error('Order not found.', 404, 'order_not_found');
+        if ($before['status'] === $status) JsonResponse::send(['message' => 'Order status is already '.$status.'.']);
+        if (!$repo->updateStatus($id, (int)$shop['id'], $status)) {
             JsonResponse::error('Invalid status or order not found.', 422, 'invalid_order_status');
         }
-        JsonResponse::send(['message' => 'Order status updated.']);
+        $order = $repo->findForShop($id, (int)$shop['id']) ?: $before;
+        $order['shop_name'] = $shop['name'];
+        $order['shop_slug'] = $shop['slug'];
+        $eventMap = ['confirmed'=>'order_confirmed','preparing'=>'order_preparing','ready'=>'order_ready','delivered'=>'order_delivered','cancelled'=>'order_cancelled','rejected'=>'order_cancelled'];
+        if (isset($eventMap[$status])) (new NotificationService($db))->orderEvent($order, $eventMap[$status]);
+        JsonResponse::send(['message' => 'Order status updated.', 'order' => $order]);
     }
 
     public static function customers(): never
@@ -76,10 +88,23 @@ final class OrderController
             JsonResponse::error('The order could not be created.', 500, 'order_creation_failed');
         }
         $settings = (new ShopRepository($db))->find((int)$shop['id']);
-        $message = self::whatsappMessage($order, $settings['name'] ?? $shop['name']);
+        $order['shop_name'] = $settings['name'] ?? $shop['name'];
+        $order['shop_slug'] = $settings['slug'] ?? $shop['slug'];
+        (new NotificationService($db))->orderEvent($order, 'order_created');
+        $mpesa = null;
+        if (($order['payment_method'] ?? '') === 'mpesa') {
+            try {
+                $mpesa = (new MpesaService($db))->initiate((int)$shop['id'], (int)$order['id'], (float)$order['total'], (string)$order['customer_phone'], (string)$order['currency'], (string)$order['order_number']);
+            } catch (\Throwable $e) {
+                $u=$db->prepare('UPDATE orders SET payment_status="failed" WHERE id=:id'); $u->execute(['id'=>$order['id']]);
+                $mpesa=['status'=>'failed','message'=>$e->getMessage()];
+            }
+        }
+        $message = self::whatsappMessage($order, $order['shop_name']);
         JsonResponse::send([
             'order' => $order,
             'whatsapp_url' => !empty($settings['whatsapp_number']) ? whatsapp_url((string)$settings['whatsapp_number'], $message) : null,
+            'mpesa' => $mpesa ? ['status'=>'pending','message'=>'STK Push sent. Complete payment on your phone.'] : null,
         ], 201);
     }
 
@@ -98,6 +123,15 @@ final class OrderController
         JsonResponse::send($order);
     }
 
+    public static function mpesaCallback(): never
+    {
+        $payload = json_decode(file_get_contents('php://input') ?: '{}', true);
+        try { (new MpesaService(Database::connection()))->handleCallback(is_array($payload) ? $payload : []); } catch (\Throwable $e) { error_log('M-Pesa callback: '.$e->getMessage()); }
+        header('Content-Type: application/json');
+        echo json_encode(['ResultCode'=>0,'ResultDesc'=>'Accepted']);
+        exit;
+    }
+
     private static function merchantShop(): array
     {
         $user = ApiAuth::requireUser();
@@ -108,7 +142,9 @@ final class OrderController
 
     private static function whatsappMessage(array $order, string $shopName): string
     {
-        $lines = ["🛍️ NEW ORDER — Dukame", '', 'Store: '.$shopName, 'Order: '.$order['order_number'], '', 'Customer:', $order['customer_name'], '📞 '.$order['customer_phone'], '', 'Items:'];
+        $customerName = trim((string)($order['customer_first_name'] ?? '') . ' ' . (string)($order['customer_last_name'] ?? ''));
+        if ($customerName === '') $customerName = (string)$order['customer_name'];
+        $lines = ["🛍️ NEW ORDER — Dukame", '', 'Store: '.$shopName, 'Order: '.$order['order_number'], '', 'Customer:', $customerName, '📞 '.$order['customer_phone'], '', 'Items:'];
         foreach (($order['items'] ?? []) as $item) {
             $optionText = '';
             $selected = json_decode($item['selected_options'] ?? '[]', true) ?: [];

@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS payments (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    shop_id BIGINT UNSIGNED NOT NULL,
+    order_id BIGINT UNSIGNED NOT NULL,
+    provider VARCHAR(30) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'KES',
+    phone VARCHAR(20) NOT NULL,
+    status ENUM('pending','paid','failed','cancelled') NOT NULL DEFAULT 'pending',
+    merchant_request_id VARCHAR(100) NULL,
+    checkout_request_id VARCHAR(100) NULL,
+    mpesa_receipt VARCHAR(100) NULL,
+    result_code VARCHAR(20) NULL,
+    result_description VARCHAR(500) NULL,
+    raw_callback TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_payments_checkout_request (checkout_request_id),
+    KEY idx_payments_order (order_id),
+    KEY idx_payments_shop_status (shop_id,status),
+    CONSTRAINT fk_payments_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -8,6 +8,7 @@ use App\Api\V1\Support\JsonResponse;
 use App\Api\V1\Support\Request;
 use App\Database\Database;
 use App\Modules\Shops\ShopRepository;
+use App\Modules\Notifications\NotificationTemplateRepository;
 use function App\Support\slugify;
 use function App\Support\reserved_shop_slug;
 
@@ -97,6 +98,67 @@ final class ShopController
             'allow_cash_on_delivery' => !empty($data['allow_cash_on_delivery']),
         ]);
         JsonResponse::send($repo->find((int)$shop['id']));
+    }
+
+    public static function notificationTemplates(): never
+    {
+        $user=ApiAuth::requireUser(); $shop=ApiAuth::shopForUser((int)$user['id']); if(!$shop) JsonResponse::error('Shop not found.',404,'shop_not_found');
+        JsonResponse::send((new NotificationTemplateRepository(Database::connection()))->allForShop((int)$shop['id']));
+    }
+
+    public static function updateNotificationTemplate(): never
+    {
+        $user=ApiAuth::requireUser(); $shop=ApiAuth::shopForUser((int)$user['id']); if(!$shop) JsonResponse::error('Shop not found.',404,'shop_not_found');
+        $data=Request::json(); $event=trim((string)($data['event_key']??'')); $template=trim((string)($data['template']??''));
+        $allowed=['order_created','order_confirmed','order_preparing','order_ready','order_delivered','order_cancelled'];
+        if(!in_array($event,$allowed,true)||$template===''||mb_strlen($template)>1000) JsonResponse::error('Invalid notification template.',422,'validation_error');
+        (new NotificationTemplateRepository(Database::connection()))->update((int)$shop['id'],$event,$template,!empty($data['enabled']));
+        JsonResponse::send(['message'=>'Notification template updated.']);
+    }
+
+    public static function publish(): never
+    {
+        $user = ApiAuth::requireUser();
+        $shop = ApiAuth::shopForUser((int)$user['id']);
+        if (!$shop) JsonResponse::error('Shop not found.', 404, 'shop_not_found');
+        if (($shop['status'] ?? '') === 'suspended') {
+            JsonResponse::error('This shop cannot be published.', 422, 'shop_suspended');
+        }
+
+        $db = Database::connection();
+        $shopId = (int)$shop['id'];
+        $productStmt = $db->prepare('SELECT COUNT(*) FROM products WHERE shop_id = :shop_id AND status = "active"');
+        $productStmt->execute(['shop_id' => $shopId]);
+        $hasProduct = (int)$productStmt->fetchColumn() > 0;
+
+        $settingsStmt = $db->prepare('SELECT whatsapp_number FROM shop_settings WHERE shop_id = :shop_id LIMIT 1');
+        $settingsStmt->execute(['shop_id' => $shopId]);
+        $settings = $settingsStmt->fetch() ?: [];
+        $hasWhatsApp = trim((string)($settings['whatsapp_number'] ?? '')) !== '';
+        $hasDetails = trim((string)($shop['description'] ?? '')) !== ''
+            && trim((string)($shop['phone'] ?? '')) !== '';
+
+        $missing = [];
+        if (!$hasDetails) $missing[] = 'shop details';
+        if (!$hasProduct) $missing[] = 'at least one active product';
+        if (!$hasWhatsApp) $missing[] = 'WhatsApp number';
+
+        if ($missing) {
+            JsonResponse::error('Complete: ' . implode(', ', $missing) . '.', 422, 'publish_requirements');
+        }
+
+        (new ShopRepository($db))->publish($shopId);
+        JsonResponse::send(['status' => 'active', 'url' => '/' . $shop['slug']]);
+    }
+
+    public static function unpublish(): never
+    {
+        $user = ApiAuth::requireUser();
+        $shop = ApiAuth::shopForUser((int)$user['id']);
+        if (!$shop) JsonResponse::error('Shop not found.', 404, 'shop_not_found');
+
+        (new ShopRepository(Database::connection()))->unpublish((int)$shop['id']);
+        JsonResponse::send(['status' => 'draft', 'url' => '/' . $shop['slug']]);
     }
 
 }

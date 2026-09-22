@@ -174,9 +174,20 @@ final class ShopRepository
     public function publish(int $shopId): void
     {
         $stmt = $this->db->prepare(
-            "UPDATE shops SET status = 'active' WHERE id = :id"
+            "UPDATE shops SET status = 'active' WHERE id = :id AND status <> 'suspended'"
         );
+        $stmt->execute(['id' => $shopId]);
 
+        if ($stmt->rowCount() === 0) {
+            throw new \RuntimeException('This shop cannot be published.');
+        }
+    }
+
+    public function unpublish(int $shopId): void
+    {
+        $stmt = $this->db->prepare(
+            "UPDATE shops SET status = 'draft' WHERE id = :id AND status = 'active'"
+        );
         $stmt->execute(['id' => $shopId]);
     }
 

@@ -24,10 +24,14 @@ final class PublicStoreController
         $categories = (new CategoryRepository($db))->allForShop((int)$shop['id'], true);
         $products = $repo->allForShop((int)$shop['id'], 'active');
 
+        $settings=(new ShopRepository($db))->find((int)$shop['id']);
+        $mpesa=($shop['status']==='active') && !empty($settings['mpesa_credentials_configured']) && !empty($settings['mpesa_phone']) && (($settings['currency']??'KES')==='KES');
+        $cod=!empty($settings['allow_cash_on_delivery']);
         JsonResponse::send([
             'shop' => $shop,
             'categories' => $categories,
             'products' => $products,
+            'payment_methods' => ['mpesa'=>$mpesa,'cash_on_delivery'=>$cod],
         ]);
     }
 }

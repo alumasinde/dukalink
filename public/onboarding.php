@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         $shopStmt = $db->prepare(
                             "INSERT INTO shops (owner_id, name, slug, business_type, status)
-                             VALUES (:owner_id, :name, :slug, :business_type, 'active')"
+                             VALUES (:owner_id, :name, :slug, :business_type, 'draft')"
                         );
 
                         $shopStmt->execute([
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         Session::forget('_onboarding_user');
                         Auth::login($userId, $shopId, $slug);
 
-                        Session::flash('success', 'Your shop is live. Start adding products.');
+                        Session::flash('success', 'Your shop was created. Complete setup, then publish it when you are ready.');
                         header('Location: /onboarding/complete');
                         exit;
                     } catch (\Throwable $e) {

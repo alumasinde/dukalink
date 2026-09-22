@@ -35,7 +35,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $action = $_POST['action'] ?? 'details';
 
-        if ($action === 'slug') {
+        if ($action === 'publish' || $action === 'unpublish') {
+            if ($action === 'publish') {
+                $activeProducts = (new \App\Modules\Products\ProductRepository($db))->allForShop($shopId, 'active');
+                $freshShop = $repo->find($shopId);
+                $hasDetails = !empty($freshShop['description']) && !empty($freshShop['phone']);
+                $hasWhatsApp = !empty($freshShop['whatsapp_number']);
+
+                if (!$hasDetails || !$activeProducts || !$hasWhatsApp) {
+                    $missing = [];
+                    if (!$hasDetails) $missing[] = 'shop details';
+                    if (!$activeProducts) $missing[] = 'at least one active product';
+                    if (!$hasWhatsApp) $missing[] = 'WhatsApp number';
+                    Session::flash('error', 'Before publishing, complete: ' . implode(', ', $missing) . '.');
+                } else {
+                    try {
+                        $repo->publish($shopId);
+                        Session::flash('success', 'Your shop is now live. Customers can visit your store.');
+                    } catch (\Throwable $e) {
+                        Session::flash('error', $e->getMessage());
+                    }
+                }
+            } else {
+                $repo->unpublish($shopId);
+                Session::flash('success', 'Your shop has been unpublished.');
+            }
+        } elseif ($action === 'slug') {
             $requested = slugify((string)($_POST['slug'] ?? ''));
 
             if ($requested === '' || strlen($requested) < 3) {
@@ -232,6 +257,32 @@ ob_start();
 
                         <button class="btn btn-outline-dark w-100">Change shop link</button>
                     </form>
+                </section>
+
+                <section class="panel p-4 mt-4">
+                    <div class="d-flex align-items-start justify-content-between gap-3">
+                        <div>
+                            <h2 class="h5 fw-bold mb-1">Store status</h2>
+                            <p class="small text-secondary mb-0">
+                                <?= $shop['status'] === 'active' ? 'Your store is visible to customers.' : 'Your store is not public yet.' ?>
+                            </p>
+                        </div>
+                        <span class="status-badge status-<?= e($shop['status']) ?>"><?= e(ucfirst($shop['status'])) ?></span>
+                    </div>
+                    <?php if ($shop['status'] === 'active'): ?>
+                        <form method="post" class="mt-3">
+                            <?= Csrf::field() ?>
+                            <input type="hidden" name="action" value="unpublish">
+                            <button class="btn btn-outline-danger w-100" type="submit">Unpublish store</button>
+                        </form>
+                    <?php else: ?>
+                        <form method="post" class="mt-3">
+                            <?= Csrf::field() ?>
+                            <input type="hidden" name="action" value="publish">
+                            <button class="btn btn-primary w-100" type="submit">Publish store</button>
+                        </form>
+                        <div class="form-text mt-2">You need shop details, at least one active product and a WhatsApp number. Logo and M-Pesa are optional.</div>
+                    <?php endif; ?>
                 </section>
 
                 <section class="panel p-4 mt-4">

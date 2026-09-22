@@ -42,6 +42,15 @@ final class Router
                 ShopController::updateSlug();
             case $route === 'shop/settings' && $method === 'PUT':
                 ShopController::updateSettings();
+            case $route === 'shop/notification-templates' && $method === 'GET':
+                ShopController::notificationTemplates();
+            case $route === 'shop/notification-templates' && $method === 'PUT':
+                ShopController::updateNotificationTemplate();
+
+            case $route === 'shop/publish' && $method === 'POST':
+                ShopController::publish();
+            case $route === 'shop/unpublish' && $method === 'POST':
+                ShopController::unpublish();
 
             case $route === 'products' && $method === 'GET':
                 CatalogController::products();
@@ -73,6 +82,8 @@ final class Router
                 OrderController::updateStatus(Request::integer($m[1]));
             case $route === 'orders/track' && $method === 'POST':
                 OrderController::track();
+            case $route === 'payments/mpesa/callback' && $method === 'POST':
+                OrderController::mpesaCallback();
             case $route === 'customers' && $method === 'GET':
                 OrderController::customers();
             case preg_match('#^customers/(\d+)$#', $route, $m) === 1 && $method === 'GET':

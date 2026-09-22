@@ -301,3 +301,23 @@ The public storefront is mobile-first and uses the versioned API for commerce ac
 Adding to cart never redirects the customer away from the product list. The cart badge/floating cart updates immediately. Products may define optional choices such as `Small, Medium, Large, XL`; these are selected on the product page and stored with the order.
 
 Orders are created through `POST /api/v1/orders`. When the shop has a WhatsApp number configured, the customer can open a pre-filled WhatsApp order message. Dukame does not require WhatsApp/Meta API access for this flow.
+
+
+## Store publishing
+
+New shops start as `draft`. A merchant can publish from the dashboard or Shop Settings once the minimum selling setup is complete:
+
+- Shop details (description and phone)
+- At least one active product
+- WhatsApp number
+
+Logo, categories, and M-Pesa configuration are optional for publishing. Publishing changes the shop to `active`, which makes the public root-level storefront available at `/{slug}`. Merchants can unpublish later, returning the shop to `draft`.
+
+API v1 also exposes authenticated `POST /api/v1/shop/publish` and `POST /api/v1/shop/unpublish`.
+
+
+## Customer checkout
+- Primary action: Place order directly in Dukame.
+- Alternative: Order on WhatsApp, using the same Dukame order number.
+- Customer details use First Name, Last Name, Phone, optional Email, delivery location and notes.
+- Orders are created server-side from trusted product prices; browser cart prices are never trusted.

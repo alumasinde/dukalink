@@ -56,6 +56,7 @@ $routes = [
 
     'settings' => 'settings/index.php',
     'settings/shop' => 'settings/shop.php',
+    'settings/notifications' => 'settings/notifications.php',
 
     'cart' => 'cart/index.php',
     'checkout' => 'checkout/index.php',

@@ -34,14 +34,54 @@ if (!$shop) {
     exit('Shop not found');
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!\App\Support\Csrf::verify($_POST['_csrf'] ?? null)) {
+        \App\Support\Session::flash('error', 'Your form session expired. Please try again.');
+        header('Location: /dashboard');
+        exit;
+    }
+
+    $action = $_POST['action'] ?? '';
+    if ($action === 'publish') {
+        $hasActiveProduct = (new ProductRepository($db))->allForShop($shopId, 'active') !== [];
+        $hasWhatsApp = trim((string)($shop['whatsapp_number'] ?? '')) !== '';
+        $hasShopDetails = trim((string)($shop['name'] ?? '')) !== ''
+            && trim((string)($shop['description'] ?? '')) !== ''
+            && trim((string)($shop['phone'] ?? '')) !== '';
+
+        $missing = [];
+        if (!$hasShopDetails) $missing[] = 'shop details';
+        if (!$hasActiveProduct) $missing[] = 'at least one active product';
+        if (!$hasWhatsApp) $missing[] = 'WhatsApp number';
+
+        if ($missing) {
+            \App\Support\Session::flash('error', 'Before publishing, complete: ' . implode(', ', $missing) . '.');
+        } else {
+            try {
+                $shopRepo->publish($shopId);
+                \App\Support\Session::flash('success', 'Your shop is now live. Customers can visit your store.');
+            } catch (\Throwable $e) {
+                \App\Support\Session::flash('error', $e->getMessage());
+            }
+        }
+    } elseif ($action === 'unpublish') {
+        $shopRepo->unpublish($shopId);
+        \App\Support\Session::flash('success', 'Your shop has been unpublished. Customers can no longer place new orders.');
+    }
+
+    header('Location: /dashboard');
+    exit;
+}
+
 $activeProducts = count(array_filter($products, fn(array $p): bool => $p['status'] === 'active'));
 $draftProducts = count(array_filter($products, fn(array $p): bool => $p['status'] === 'draft'));
 
 $setupItems = [
     'Shop details' => !empty($shop['description']) && !empty($shop['phone']),
     'Store logo' => !empty($shop['logo_path']),
-    'First product' => count($products) > 0,
+    'First product' => $activeProducts > 0,
     'Category' => count($categories) > 0,
+    'WhatsApp' => !empty($shop['whatsapp_number']),
     'M-Pesa' => !empty($shop['mpesa_credentials_configured']) || !empty($shop['allow_cash_on_delivery']),
 ];
 $setupComplete = count(array_filter($setupItems)) ;
@@ -81,16 +121,30 @@ ob_start();
 
         <section class="dashboard-welcome dashboard-welcome-modern">
             <div class="dashboard-welcome-copy">
-                <span class="eyebrow">YOUR SHOP IS LIVE</span>
-                <h2 class="h4 fw-bold mt-2 mb-1">Ready to sell?</h2>
-                <p class="mb-3">Keep your catalogue fresh and share your store with customers.</p>
+                <span class="eyebrow"><?= $shop['status'] === 'active' ? 'YOUR SHOP IS LIVE' : 'YOUR SHOP IS IN DRAFT' ?></span>
+                <h2 class="h4 fw-bold mt-2 mb-1"><?= $shop['status'] === 'active' ? 'Ready to sell?' : 'Your shop is ready to go live' ?></h2>
+                <p class="mb-3"><?= $shop['status'] === 'active' ? 'Keep your catalogue fresh and share your store with customers.' : 'Your customers cannot see this shop yet. Publish it when you are ready.' ?></p>
                 <div class="dashboard-store-url">
                     <span>dukame.app/<?= e($shop['slug']) ?></span>
                     <button type="button" class="btn btn-sm btn-light" data-copy-text="<?= e('dukame.app/' . $shop['slug']) ?>">Copy link</button>
                 </div>
             </div>
             <div class="dashboard-welcome-action">
-                <a href="/settings/shop" class="btn btn-light">Customize shop</a>
+                <?php if ($shop['status'] === 'active'): ?>
+                    <a href="<?= e(\App\Support\shop_url($shop['slug'])) ?>" target="_blank" class="btn btn-light">View shop</a>
+                    <form method="post" class="d-inline mt-2 mt-md-0">
+                        <?= \App\Support\Csrf::field() ?>
+                        <input type="hidden" name="action" value="unpublish">
+                        <button class="btn btn-outline-light" type="submit">Unpublish</button>
+                    </form>
+                <?php else: ?>
+                    <form method="post" class="d-inline">
+                        <?= \App\Support\Csrf::field() ?>
+                        <input type="hidden" name="action" value="publish">
+                        <button class="btn btn-light fw-semibold" type="submit">Publish store</button>
+                    </form>
+                    <a href="/settings/shop" class="btn btn-outline-light mt-2 mt-md-0">Customize shop</a>
+                <?php endif; ?>
             </div>
         </section>
 
@@ -204,10 +258,25 @@ ob_start();
                                 </a>
                             <?php endforeach; ?>
                         </div>
-                        <?php if ($setupComplete < $setupTotal): ?>
-                            <a href="/settings/shop" class="btn btn-outline-dark w-100 mt-2">Complete setup</a>
+                        <?php
+                        $canPublish = !empty($shop['description'])
+                            && !empty($shop['phone'])
+                            && $activeProducts > 0
+                            && !empty($shop['whatsapp_number'])
+                            && $shop['status'] !== 'suspended';
+                        ?>
+                        <?php if ($shop['status'] === 'active'): ?>
+                            <div class="setup-complete-note">Your shop is live. Customers can visit and place orders.</div>
+                        <?php elseif ($canPublish): ?>
+                            <div class="setup-complete-note">Everything needed to publish is ready.</div>
+                            <form method="post" class="mt-2">
+                                <?= \App\Support\Csrf::field() ?>
+                                <input type="hidden" name="action" value="publish">
+                                <button class="btn btn-primary w-100" type="submit">Publish store</button>
+                            </form>
                         <?php else: ?>
-                            <div class="setup-complete-note">Your shop is ready for the next step.</div>
+                            <a href="/settings/shop" class="btn btn-outline-dark w-100 mt-2">Complete setup</a>
+                            <div class="small text-secondary mt-2">Logo, category and M-Pesa can be added later.</div>
                         <?php endif; ?>
                     </div>
                 </section>

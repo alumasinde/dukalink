@@ -40,6 +40,7 @@ $merchantSection = $merchantSection ?? 'overview';
             <a href="<?= e(shop_url((string)$merchantShop['slug'])) ?>" target="_blank"><span>↗</span> View my shop</a>
         <?php endif; ?>
         <a class="<?= $merchantSection === 'settings' ? 'active' : '' ?>" href="/settings/shop"><span>⚙</span> Settings</a>
+        <a class="<?= $merchantSection === 'notifications' ? 'active' : '' ?>" href="/settings/notifications"><span>✉</span> SMS templates</a>
     </nav>
 
     <div class="sidebar-bottom">
@@ -60,7 +61,7 @@ $merchantSection = $merchantSection ?? 'overview';
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
-        <?php $mobileNav = ['overview' => ['/dashboard','▦','Overview'], 'products' => ['/products','◫','Products'], 'categories' => ['/categories','◇','Categories'], 'orders' => ['/orders','▤','Orders'], 'customers' => ['/customers','♙','Customers'], 'settings' => ['/settings/shop','⚙','Settings']]; ?>
+        <?php $mobileNav = ['overview' => ['/dashboard','▦','Overview'], 'products' => ['/products','◫','Products'], 'categories' => ['/categories','◇','Categories'], 'orders' => ['/orders','▤','Orders'], 'customers' => ['/customers','♙','Customers'], 'settings' => ['/settings/shop','⚙','Settings'], 'notifications' => ['/settings/notifications','✉','SMS templates']]; ?>
         <nav class="merchant-nav">
             <?php foreach ($mobileNav as $key => [$url,$icon,$label]): ?>
                 <a class="<?= $merchantSection === $key ? 'active' : '' ?>" href="<?= e($url) ?>"><span><?= e($icon) ?></span> <?= e($label) ?></a>

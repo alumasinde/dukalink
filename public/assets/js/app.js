@@ -82,10 +82,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCheckout(){
         const root=document.getElementById('checkoutRoot'), slug=activeStore(), cart=pageCart();
-        if(!slug||!cart.length){root.innerHTML='<div class="customer-empty"><div>🛒</div><h1>Nothing to checkout</h1><p>Add products before checking out.</p><a class="customer-primary-action inline" href="/'+encodeURIComponent(slug||'')+'">Back to shop</a></div>';return;}
+        if(!slug||!cart.length){
+            root.innerHTML='<div class="customer-empty"><div>🛒</div><h1>Nothing to checkout</h1><p>Add products before checking out.</p><a class="customer-primary-action inline" href="'+(slug?'/'+encodeURIComponent(slug):'/')+'">Back to shop</a></div>';
+            return;
+        }
+
         const total=cart.reduce((s,i)=>s+i.price*i.quantity,0);
-        root.innerHTML=`<div class="customer-section-heading"><div><span class="customer-eyebrow">ALMOST THERE</span><h1>Checkout</h1></div></div><div class="checkout-layout"><form id="checkoutForm" class="checkout-form"><section><h2>Your details</h2><label>Full name<input name="customer_name" autocomplete="name" required placeholder="John Kamau"></label><label>Phone number<input name="customer_phone" type="tel" autocomplete="tel" required placeholder="0712 345 678"></label><label>Email <span>(optional)</span><input name="customer_email" type="email" autocomplete="email" placeholder="you@example.com"></label><label>Delivery location / address <span>(optional)</span><textarea name="delivery_address" rows="3" placeholder="Kasarani, Nairobi"></textarea><label>Notes <span>(optional)</span><textarea name="notes" rows="2" placeholder="Any delivery instructions?"></textarea></label></section><button class="customer-primary-action" type="submit">Order on WhatsApp</button><p class="checkout-note">Your order is created in Dukame first. WhatsApp then opens with a ready-to-send order message for the store.</p><div class="form-error" data-checkout-error hidden></div></form><aside class="checkout-summary"><h2>Your order</h2>${cart.map(i=>`<div class="checkout-line"><span>${escapeHtml(i.name)} × ${i.quantity}${i.options?.length?`<small>${escapeHtml(i.options.join(' · '))}</small>`:''}</span><strong>${pageCurrency()} ${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2})}</strong></div>`).join('')}<div class="checkout-total"><span>Total</span><strong>${pageCurrency()} ${total.toLocaleString('en-KE',{minimumFractionDigits:2})}</strong></div></aside></div>`;
-        document.getElementById('checkoutForm').addEventListener('submit', async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button[type=submit]'),err=document.querySelector('[data-checkout-error]');err.hidden=true;btn.disabled=true;btn.textContent='Creating order…';const data=Object.fromEntries(new FormData(e.currentTarget).entries());data.shop_slug=slug;data.payment_method='whatsapp';data.items=cart.map(i=>({product_id:i.id,quantity:i.quantity,options:i.options||[]}));try{const r=await fetch('/api/v1/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const json=await r.json();if(!r.ok||!json.success)throw new Error(json.error?.message||'Could not create your order.');const order=json.data.order;localStorage.removeItem(`dukame_cart_${slug}`);root.innerHTML=`<div class="order-success"><div class="success-icon">✓</div><span class="customer-eyebrow">ORDER CREATED</span><h1>You're all set.</h1><p>Your order <strong>${escapeHtml(order.order_number)}</strong> has been created. Send it to the store on WhatsApp so they can confirm it.</p><div class="success-order-number">${escapeHtml(order.order_number)}</div>${json.data.whatsapp_url?`<a class="customer-primary-action inline" href="${escapeHtml(json.data.whatsapp_url)}">Open WhatsApp & Send Order</a>`:'<div class="form-error">This store has not configured a WhatsApp number yet.</div>'}<a class="secondary-action" href="/track">Track your order</a></div>`; }catch(ex){err.textContent=ex.message;err.hidden=false;btn.disabled=false;btn.textContent='Order on WhatsApp';}});
+        root.innerHTML=`<div class="customer-section-heading"><div><span class="customer-eyebrow">ALMOST THERE</span><h1>Checkout</h1><p class="checkout-intro">Enter your details and place your order. No account is required.</p></div></div>
+        <div class="checkout-layout">
+          <form id="checkoutForm" class="checkout-form" novalidate>
+            <section>
+              <h2>Your details</h2>
+              <div class="checkout-name-grid">
+                <label>First name<input name="first_name" autocomplete="given-name" maxlength="100" required placeholder="John"></label>
+                <label>Last name<input name="last_name" autocomplete="family-name" maxlength="100" required placeholder="Kamau"></label>
+              </div>
+              <label>Phone number<input name="customer_phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required placeholder="0712 345 678"><small>We'll use this to identify your order when you track it.</small></label>
+              <label>Email <span>(optional)</span><input name="customer_email" type="email" autocomplete="email" maxlength="190" placeholder="you@example.com"></label>
+              <label>Delivery location / address <span>(optional)</span><textarea name="delivery_address" rows="3" maxlength="500" placeholder="Kasarani, Nairobi"></textarea>
+              <label>Notes <span>(optional)</span><textarea name="notes" rows="2" maxlength="1000" placeholder="Any delivery instructions?"></textarea></label>
+              <div class="payment-choice"><h3>Payment</h3>${store?.payment_methods?.mpesa?`<label class="payment-option"><input type="radio" name="payment_method" value="mpesa" ${!store?.payment_methods?.cash_on_delivery?'checked':''}><span><strong>M-Pesa</strong><small>Pay securely with an M-Pesa STK Push.</small></span></label>`:''}${store?.payment_methods?.cash_on_delivery?`<label class="payment-option"><input type="radio" name="payment_method" value="cash_on_delivery" ${store?.payment_methods?.mpesa?'':'checked'}><span><strong>Cash on delivery</strong><small>Pay the merchant when your order is delivered.</small></span></label>`:''}${!store?.payment_methods?.mpesa&&!store?.payment_methods?.cash_on_delivery?`<div class="form-error">Payment method not available
+This store hasn't enabled online payments yet. <br>Please contact the merchant to arrange payment.</div>`:''}</div>
+            </section>
+            <div class="checkout-actions">
+              <button class="customer-primary-action" type="submit" data-order-action="web">Place order</button>
+              <button class="customer-whatsapp-action" type="button" data-order-action="whatsapp">Order on WhatsApp <span>↗</span></button>
+            </div>
+            <p class="checkout-note">Your order is saved in Dukame first. WhatsApp is an optional way to send the same order to the store.</p>
+            <div class="form-error" data-checkout-error hidden></div>
+          </form>
+          <aside class="checkout-summary"><h2>Your order</h2>${cart.map(i=>`<div class="checkout-line"><span>${escapeHtml(i.name)} × ${i.quantity}${i.options?.length?`<small>${escapeHtml(i.options.join(' · '))}</small>`:''}</span><strong>${pageCurrency()} ${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2})}</strong></div>`).join('')}<div class="checkout-total"><span>Total</span><strong>${pageCurrency()} ${total.toLocaleString('en-KE',{minimumFractionDigits:2})}</strong></div></aside>
+        </div>`;
+
+        const form=document.getElementById('checkoutForm');
+        const submitOrder=async(channel)=>{
+            if(!form.reportValidity()) return;
+            if(!form.querySelector('input[name=payment_method]:checked')) { const err=form.querySelector('[data-checkout-error]'); err.textContent='Please select a payment method.'; err.hidden=false; return; }
+            const buttons=form.querySelectorAll('button[type=submit], [data-order-action=whatsapp]');
+            const clicked=channel==='whatsapp' ? form.querySelector('[data-order-action=whatsapp]') : form.querySelector('[data-order-action=web]');
+            const err=form.querySelector('[data-checkout-error]');
+            err.hidden=true;
+            buttons.forEach(b=>b.disabled=true);
+            clicked.textContent=channel==='whatsapp'?'Creating order…':'Placing order…';
+            const data=Object.fromEntries(new FormData(form).entries());
+            data.shop_slug=slug;
+            data.order_channel=channel;
+            data.items=cart.map(i=>({product_id:i.id,quantity:i.quantity,options:i.options||[]}));
+            try{
+                const r=await fetch('/api/v1/orders',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(data)});
+                const json=await r.json();
+                if(!r.ok||!json.success) throw new Error(json.error?.message||'Could not create your order.');
+                const order=json.data.order;
+                localStorage.removeItem(`dukame_cart_${slug}`);
+                const whatsapp=json.data.whatsapp_url;
+                root.innerHTML=`<div class="order-success"><div class="success-icon">✓</div><span class="customer-eyebrow">ORDER PLACED</span><h1>Thank you, ${escapeHtml(order.customer_first_name || '')}.</h1><p>Your order <strong>${escapeHtml(order.order_number)}</strong> has been placed with ${escapeHtml(order.shop_name || '')}.</p><div class="success-order-number">${escapeHtml(order.order_number)}</div><p class="success-note">Keep your order number and phone number so you can track your order anytime.</p>${json.data.mpesa?.status==='pending'?'<div class="payment-pending-note"><strong>Check your phone.</strong> An M-Pesa STK Push has been sent. Complete the payment to finish your payment.</div>':''}${channel==='whatsapp'&&whatsapp?`<a class="customer-whatsapp-action inline" href="${escapeHtml(whatsapp)}">Open WhatsApp & Send Order ↗</a>`:''}${channel!=='whatsapp'&&whatsapp?`<a class="secondary-action" href="${escapeHtml(whatsapp)}">Also send order on WhatsApp ↗</a>`:''}<a class="customer-primary-action inline" href="/track">Track your order</a><a class="secondary-action" href="/${encodeURIComponent(slug)}">Continue shopping</a></div>`;
+                if(channel==='whatsapp'&&whatsapp) window.location.href=whatsapp;
+            }catch(ex){
+                err.textContent=ex.message;err.hidden=false;buttons.forEach(b=>b.disabled=false);
+                clicked.textContent=channel==='whatsapp'?'Order on WhatsApp':'Place order';
+            }
+        };
+        form.addEventListener('submit',e=>{e.preventDefault();submitOrder('web');});
+        form.querySelector('[data-order-action=whatsapp]').addEventListener('click',()=>submitOrder('whatsapp'));
     }
 
     function bindTracking(){const form=document.getElementById('trackForm');form?.addEventListener('submit',async e=>{e.preventDefault();const err=document.querySelector('[data-track-error]'),result=document.getElementById('trackResult');err.hidden=true;result.innerHTML='';const data=Object.fromEntries(new FormData(form).entries());try{const r=await fetch('/api/v1/orders/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const json=await r.json();if(!r.ok||!json.success)throw new Error(json.error?.message||'Order not found.');const o=json.data;result.innerHTML=`<div class="tracking-result"><div class="tracking-top"><div><small>${escapeHtml(o.shop_name)}</small><h2>${escapeHtml(o.order_number)}</h2></div><span class="status-badge status-${escapeHtml(o.status)}">${escapeHtml(o.status.replace('_',' '))}</span></div><div class="tracking-steps"><span class="${['pending','confirmed','preparing','ready','delivered'].includes(o.status)?'done':''}">Order received</span><span class="${['confirmed','preparing','ready','delivered'].includes(o.status)?'done':''}">Confirmed</span><span class="${['preparing','ready','delivered'].includes(o.status)?'done':''}">Preparing</span><span class="${['ready','delivered'].includes(o.status)?'done':''}">Ready</span><span class="${o.status==='delivered'?'done':''}">Delivered</span></div><div class="tracking-total"><span>Total</span><strong>${escapeHtml(o.currency)} ${Number(o.total).toLocaleString('en-KE',{minimumFractionDigits:2})}</strong></div></div>`;}catch(ex){err.textContent=ex.message;err.hidden=false;}})}

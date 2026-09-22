@@ -64,5 +64,5 @@ ob_start(); ?>
     </main>
     <div class="customer-cart-toast" data-floating-cart hidden><div><small>Cart</small><strong><span data-cart-count>0</span> items · <span data-cart-total>0</span></strong></div><a href="/cart?shop=<?= e($slug) ?>">View cart →</a></div>
 </div>
-<script>window.DUKAME_STORE=<?= json_encode(['slug'=>$slug,'currency'=>$currency], JSON_UNESCAPED_SLASHES) ?>;</script>
+<script>window.DUKAME_STORE=<?= json_encode(['slug'=>$slug,'currency'=>$currency,'payment_methods'=>['mpesa'=>!empty($shop['mpesa_credentials_configured']) && !empty($shop['mpesa_phone']) && $currency==='KES','cash_on_delivery'=>!empty($shop['allow_cash_on_delivery'])]], JSON_UNESCAPED_SLASHES) ?>;</script>
 <?php $content=ob_get_clean(); $title=$shop['name']; require dirname(__DIR__,2).'/app/Views/layouts/customer.php';
