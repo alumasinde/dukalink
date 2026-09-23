@@ -118,6 +118,24 @@ final class OrderService
         }
     }
 
+    /** Apply a merchant order-status transition and send the matching notification. */
+    public function updateStatus(int $orderId, int $shopId, string $status): array
+    {
+        $repo = new OrderRepository($this->db);
+        $before = $repo->findForShop($orderId, $shopId);
+        if (!$before) throw new \RuntimeException('Order not found.');
+        $allowed = ['pending','confirmed','preparing','ready','delivered','cancelled','rejected'];
+        if (!in_array($status, $allowed, true)) throw new \InvalidArgumentException('Invalid order status.');
+        if ($before['status'] === $status) return $before;
+        if (!$repo->updateStatus($orderId, $shopId, $status)) throw new \RuntimeException('Order status could not be updated.');
+        $order = $repo->findForShop($orderId, $shopId) ?: $before;
+        $shop = (new ShopRepository($this->db))->find($shopId);
+        if ($shop) { $order['shop_name'] = $shop['name']; $order['shop_slug'] = $shop['slug']; }
+        $eventMap = ['confirmed'=>'order_confirmed','preparing'=>'order_preparing','ready'=>'order_ready','delivered'=>'order_delivered','cancelled'=>'order_cancelled','rejected'=>'order_cancelled'];
+        if (isset($eventMap[$status])) (new \App\Modules\Notifications\NotificationService($this->db))->orderEvent($order, $eventMap[$status]);
+        return $order;
+    }
+
     private function findOrCreateCustomer(int $shopId, string $firstName, string $lastName, string $phone, ?string $email): array
     {
         $stmt = $this->db->prepare('SELECT * FROM customers WHERE shop_id = :shop_id AND phone = :phone LIMIT 1');

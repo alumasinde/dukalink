@@ -25,6 +25,25 @@ final class NotificationService {
             else $this->mark($logId,'failed',(string)($result['message_id']??''),(string)($result['description']??'TextSMS rejected the message.'),(string)($result['code']??''),json_encode($result));
         } catch(\Throwable $e) { $this->mark($logId,'failed',null,$e->getMessage(),null,null); }
     }
+    public function retryFailed(int $limit=25): int {
+        $limit=max(1,min(100,$limit));
+        $sql='SELECT * FROM notification_logs WHERE status="failed" AND channel="sms" ORDER BY id ASC LIMIT '.$limit;
+        $rows=$this->db->query($sql)->fetchAll();
+        $count=0;
+        foreach($rows as $row){
+            try {
+                $result=(new TextSmsClient())->send((string)$row['recipient'],(string)$row['message']);
+                if(!empty($result['sent'])){
+                    $this->mark((int)$row['id'],'sent',(string)($result['message_id']??''),null,(string)($result['code']??''),json_encode($result));
+                    $count++;
+                } else {
+                    $this->mark((int)$row['id'],'failed',(string)($result['message_id']??''),(string)($result['description']??'TextSMS rejected the message.'),(string)($result['code']??''),json_encode($result));
+                }
+            } catch(\Throwable $e){ $this->mark((int)$row['id'],'failed',null,$e->getMessage(),null,null); }
+        }
+        return $count;
+    }
+
     private function mark(int $id,string $status,?string $messageId=null,?string $error=null,?string $code=null,?string $response=null):void {
         $s=$this->db->prepare('UPDATE notification_logs SET status=:status,provider_message_id=:message_id,error_message=:error_message,provider_code=:provider_code,provider_response=:provider_response,sent_at=CASE WHEN :status2="sent" THEN NOW() ELSE sent_at END WHERE id=:id');
         $s->execute(['status'=>$status,'status2'=>$status,'message_id'=>$messageId?:null,'error_message'=>$error?:null,'provider_code'=>$code?:null,'provider_response'=>$response?:null,'id'=>$id]);

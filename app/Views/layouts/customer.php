@@ -38,10 +38,12 @@ $themeStyle = '--dk-primary:' . e($brand['primary']) . ';--dk-accent:' . e($bran
     <link rel="stylesheet" href="<?= e(asset_url('/assets/css/variables.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset_url('/assets/css/app.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset_url('/assets/css/components.css')) ?>">
+    <link rel="stylesheet" href="<?= e(asset_url('/assets/css/pages/customer.css')) ?>">
     <style>:root{<?= $themeStyle ?>--dk-primary-dark:color-mix(in srgb,var(--dk-primary) 82%,#000);--dk-primary-soft:color-mix(in srgb,var(--dk-primary) 10%,#fff);--dk-accent-soft:color-mix(in srgb,var(--dk-accent) 10%,#fff)}</style>
     <?php if (is_array($seoSchema)): ?><script type="application/ld+json"><?= json_encode($seoSchema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?></script><?php endif; ?>
 </head>
 <body class="customer-body">
+<a class="skip-link" href="#main-content">Skip to content</a>
 <?= $content ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= e(asset_url('/assets/js/app.js')) ?>"></script>

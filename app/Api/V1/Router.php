@@ -25,6 +25,11 @@ final class Router
         }
 
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+        $maxBody = max(1024, (int)($_ENV['API_MAX_BODY_BYTES'] ?? 2097152));
+        if ($contentLength > $maxBody) {
+            JsonResponse::error('Request body is too large.', 413, 'payload_too_large');
+        }
         $route = implode('/', array_slice($parts, 2));
 
         switch (true) {
@@ -83,6 +88,10 @@ final class Router
                 OrderController::updateStatus(Request::integer($m[1]));
             case $route === 'orders/track' && $method === 'POST':
                 OrderController::track();
+            case $route === 'orders/payment-status' && $method === 'POST':
+                OrderController::paymentStatus();
+            case $route === 'orders/mpesa/retry' && $method === 'POST':
+                OrderController::retryMpesa();
             case $route === 'payments/mpesa/callback' && $method === 'POST':
                 OrderController::mpesaCallback();
             case $route === 'subscriptions/mpesa/callback' && $method === 'POST':

@@ -7,6 +7,8 @@ use App\Api\V1\Support\ApiAuth;
 use App\Api\V1\Support\JsonResponse;
 use App\Api\V1\Support\Request;
 use App\Database\Database;
+use App\Support\RateLimiter;
+use App\Support\Security;
 
 final class AuthController
 {
@@ -15,7 +17,13 @@ final class AuthController
         $data = Request::json();
         $identifier = trim((string)($data['phone'] ?? $data['email'] ?? ''));
         $password = (string)($data['password'] ?? '');
+        $rateKey = 'api-login:' . Security::clientIp() . ':' . strtolower($identifier);
+        $rateMax = max(3, (int)($_ENV['API_LOGIN_RATE_LIMIT_MAX'] ?? 10));
+        $rateWindow = max(60, (int)($_ENV['API_LOGIN_RATE_LIMIT_WINDOW'] ?? 900));
 
+        if (RateLimiter::tooMany($rateKey, $rateMax, $rateWindow)) {
+            JsonResponse::error('Too many login attempts. Please try again later.', 429, 'rate_limited');
+        }
         if ($identifier === '' || $password === '') {
             JsonResponse::error('Phone/email and password are required.', 422, 'validation_error');
         }
@@ -33,6 +41,11 @@ final class AuthController
             JsonResponse::error('The phone/email or password is incorrect.', 401, 'invalid_credentials');
         }
 
+        if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
+            $rehash = Database::connection()->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+            $rehash->execute(['hash' => password_hash($password, PASSWORD_DEFAULT), 'id' => (int)$user['id']]);
+        }
+        RateLimiter::clear($rateKey);
         $expiresAt = (new \DateTimeImmutable('+30 days'))->format('Y-m-d H:i:s');
         $token = ApiAuth::issue((int)$user['id'], 'Dukame API v1', $expiresAt);
         unset($user['password_hash']);

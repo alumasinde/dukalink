@@ -1,6 +1,7 @@
 <?php
 use function App\Support\e;
 use function App\Support\asset_url;
+use App\Support\Csrf;
 $title = $title ?? 'Platform';
 $content = $content ?? '';
 $platformUser = $platformUser ?? null;
@@ -19,9 +20,11 @@ $themeStyle = '--dk-primary:' . e($brand['primary']) . ';--dk-accent:' . e($bran
 <link rel="stylesheet" href="<?= e(asset_url('/assets/css/variables.css')) ?>">
 <link rel="stylesheet" href="<?= e(asset_url('/assets/css/app.css')) ?>">
 <link rel="stylesheet" href="<?= e(asset_url('/assets/css/components.css')) ?>">
+<link rel="stylesheet" href="<?= e(asset_url('/assets/css/pages/platform.css')) ?>">
 <style>:root{<?= $themeStyle ?>}</style>
 </head>
 <body class="platform-body">
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="platform-shell">
 <aside class="platform-sidebar">
     <a class="platform-brand" href="<?= e($base) ?>"><span class="brand-mark">D</span><span><strong><?= e($brand['name']) ?></strong><small>Platform</small></span></a>
@@ -47,11 +50,11 @@ $themeStyle = '--dk-primary:' . e($brand['primary']) . ';--dk-accent:' . e($bran
       <a class="<?= $platformSection==='users'?'active':'' ?>" href="<?= e($base) ?>/users"><span>♙</span> Platform Users</a>
       <a class="<?= $platformSection==='audit'?'active':'' ?>" href="<?= e($base) ?>/audit"><span>◌</span> Audit Log</a>
     </nav>
-    <div class="platform-sidebar-bottom"><a href="<?= e($base) ?>/logout"><span>↪</span> Sign out</a></div>
+    <div class="platform-sidebar-bottom"><form method="post" action="<?= e($base) ?>/logout" class="m-0"><input type="hidden" name="_csrf" value="<?= e(Csrf::token()) ?>"><button class="platform-nav-link border-0 bg-transparent w-100 text-start" type="submit"><span>↪</span> Sign out</button></form></div>
 </aside>
 <div class="platform-main">
 <header class="platform-topbar"><div><div class="platform-kicker">Dukame platform</div><h1><?= e($title) ?></h1></div><div class="d-flex align-items-center gap-2"><a class="btn btn-sm btn-outline-dark" href="/" target="_blank">View site</a><a class="btn btn-sm btn-primary" href="<?= e($base) ?>/plans">Plans</a></div></header>
-<main class="platform-content"><?= $content ?></main>
+<main id="main-content" class="platform-content"><?= $content ?></main>
 </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="<?= e(asset_url('/assets/js/app.js')) ?>"></script>

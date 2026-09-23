@@ -16,6 +16,7 @@ final class Auth
     public static function login(int $userId, int $shopId, string $slug): void
     {
         Session::regenerate();
+        Csrf::regenerate();
         Session::put('user_id', $userId);
         Session::put('shop_id', $shopId);
         Session::put('shop_slug', $slug);

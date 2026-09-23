@@ -1,4 +1,7 @@
 <?php
+use App\Support\Csrf;
+?>
+<?php
 use function App\Support\e;
 use function App\Support\shop_url;
 $merchantShop = $merchantShop ?? null;
@@ -26,7 +29,7 @@ $merchantSection = $merchantSection ?? 'overview';
     <?php endif; ?>
 
     <div class="small text-uppercase text-secondary fw-bold mb-2">Manage</div>
-    <nav class="merchant-nav">
+    <nav class="merchant-nav" aria-label="Merchant navigation">
         <a class="<?= $merchantSection === 'overview' ? 'active' : '' ?>" href="/dashboard"><span>▦</span> Overview</a>
         <a class="<?= $merchantSection === 'products' ? 'active' : '' ?>" href="/products"><span>◫</span> Products</a>
         <a class="<?= $merchantSection === 'categories' ? 'active' : '' ?>" href="/categories"><span>◇</span> Categories</a>
@@ -35,7 +38,7 @@ $merchantSection = $merchantSection ?? 'overview';
     </nav>
 
     <div class="small text-uppercase text-secondary fw-bold mb-2 mt-4">Store</div>
-    <nav class="merchant-nav">
+    <nav class="merchant-nav" aria-label="Merchant navigation">
         <?php if ($merchantShop): ?>
             <a href="<?= e(shop_url((string)$merchantShop['slug'])) ?>" target="_blank"><span> </span> View my shop</a>
         <?php endif; ?>
@@ -47,7 +50,7 @@ $merchantSection = $merchantSection ?? 'overview';
     </nav>
 
     <div class="sidebar-bottom">
-        <a href="/logout" class="merchant-nav-link"><span>↪</span> Log out</a>
+        <form method="post" action="/logout" class="m-0"><input type="hidden" name="_csrf" value="<?= e(Csrf::token()) ?>"><button type="submit" class="merchant-nav-link border-0 bg-transparent w-100 text-start"><span>↪</span> Log out</button></form>
     </div>
 </aside>
 
@@ -65,12 +68,12 @@ $merchantSection = $merchantSection ?? 'overview';
     </div>
     <div class="offcanvas-body">
         <?php $mobileNav = ['overview' => ['/dashboard','▦','Overview'], 'products' => ['/products','◫','Products'], 'categories' => ['/categories','◇','Categories'], 'orders' => ['/orders','▤','Orders'], 'customers' => ['/customers','♙','Customers'], 'settings' => ['/settings/shop','⚙','Shop settings'], 'payments' => ['/settings/payments','◉','Payments'], 'delivery' => ['/settings/delivery','⌂','Delivery & Pickup'], 'notifications' => ['/settings/notifications','✉','SMS templates'], 'subscription' => ['/subscription','◇','Subscription']]; ?>
-        <nav class="merchant-nav">
+        <nav class="merchant-nav" aria-label="Merchant navigation">
             <?php foreach ($mobileNav as $key => [$url,$icon,$label]): ?>
                 <a class="<?= $merchantSection === $key ? 'active' : '' ?>" href="<?= e($url) ?>"><span><?= e($icon) ?></span> <?= e($label) ?></a>
             <?php endforeach; ?>
             <?php if ($merchantShop): ?><a href="<?= e(shop_url((string)$merchantShop['slug'])) ?>" target="_blank"><span> </span> View my shop</a><?php endif; ?>
-            <a href="/logout"><span>↪</span> Log out</a>
+            <form method="post" action="/logout" class="m-0"><input type="hidden" name="_csrf" value="<?= e(Csrf::token()) ?>"><button type="submit" class="border-0 bg-transparent p-0"><span>↪</span> Log out</button></form>
         </nav>
     </div>
 </div>

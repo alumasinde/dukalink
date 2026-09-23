@@ -16,6 +16,8 @@ use App\Modules\Payments\MpesaService;
 use App\Modules\Shops\ShopRepository;
 use function App\Support\normalize_phone;
 use function App\Support\whatsapp_url;
+use App\Support\RateLimiter;
+use App\Support\Security;
 
 final class OrderController
 {
@@ -39,18 +41,10 @@ final class OrderController
         $shop = self::merchantShop();
         $status = (string)(Request::json()['status'] ?? '');
         $db = Database::connection();
-        $repo = new OrderRepository($db);
-        $before = $repo->findForShop($id, (int)$shop['id']);
-        if (!$before) JsonResponse::error('Order not found.', 404, 'order_not_found');
-        if ($before['status'] === $status) JsonResponse::send(['message' => 'Order status is already '.$status.'.']);
-        if (!$repo->updateStatus($id, (int)$shop['id'], $status)) {
-            JsonResponse::error('Invalid status or order not found.', 422, 'invalid_order_status');
-        }
-        $order = $repo->findForShop($id, (int)$shop['id']) ?: $before;
-        $order['shop_name'] = $shop['name'];
-        $order['shop_slug'] = $shop['slug'];
-        $eventMap = ['confirmed'=>'order_confirmed','preparing'=>'order_preparing','ready'=>'order_ready','delivered'=>'order_delivered','cancelled'=>'order_cancelled','rejected'=>'order_cancelled'];
-        if (isset($eventMap[$status])) (new NotificationService($db))->orderEvent($order, $eventMap[$status]);
+        $service = new OrderService($db);
+        try { $order = $service->updateStatus($id, (int)$shop['id'], $status); }
+        catch (\RuntimeException $e) { JsonResponse::error($e->getMessage(), 404, 'order_not_found'); }
+        catch (\InvalidArgumentException $e) { JsonResponse::error($e->getMessage(), 422, 'invalid_order_status'); }
         JsonResponse::send(['message' => 'Order status updated.', 'order' => $order]);
     }
 
@@ -74,6 +68,10 @@ final class OrderController
     {
         $data = Request::json();
         $slug = strtolower(trim((string)($data['shop_slug'] ?? '')));
+        $publicOrderKey = 'public-order:' . Security::clientIp() . ':' . $slug;
+        if (RateLimiter::tooMany($publicOrderKey, max(5, (int)($_ENV['PUBLIC_ORDER_RATE_LIMIT_MAX'] ?? 30)), max(60, (int)($_ENV['PUBLIC_ORDER_RATE_LIMIT_WINDOW'] ?? 600)))) {
+            JsonResponse::error('Too many order attempts. Please try again later.', 429, 'rate_limited');
+        }
         if ($slug === '') JsonResponse::error('Shop slug is required.', 422, 'validation_error');
         $db = Database::connection();
         $stmt = $db->prepare('SELECT s.id, s.slug, s.name, s.status, s.phone, ss.currency FROM shops AS s LEFT JOIN shop_settings AS ss ON ss.shop_id = s.id WHERE s.slug = :slug AND s.status = "active" LIMIT 1');
@@ -111,6 +109,9 @@ final class OrderController
     public static function track(): never
     {
         $data = Request::json();
+        if (RateLimiter::tooMany('track-order:' . Security::clientIp(), max(5, (int)($_ENV['PUBLIC_TRACK_RATE_LIMIT_MAX'] ?? 30)), max(60, (int)($_ENV['PUBLIC_TRACK_RATE_LIMIT_WINDOW'] ?? 600)))) {
+            JsonResponse::error('Too many tracking attempts. Please try again later.', 429, 'rate_limited');
+        }
         $orderNumber = trim((string)($data['order_number'] ?? ''));
         $phone = normalize_phone((string)($data['phone'] ?? ''));
         if ($orderNumber === '' || $phone === '') JsonResponse::error('Order number and phone number are required.', 422, 'validation_error');
@@ -123,12 +124,66 @@ final class OrderController
         JsonResponse::send($order);
     }
 
+    public static function paymentStatus(): never
+    {
+        $data=Request::json();
+        if (RateLimiter::tooMany('payment-status:' . Security::clientIp(), max(5, (int)($_ENV['PUBLIC_PAYMENT_RATE_LIMIT_MAX'] ?? 20)), max(60, (int)($_ENV['PUBLIC_PAYMENT_RATE_LIMIT_WINDOW'] ?? 600)))) {
+            JsonResponse::error('Too many payment status requests. Please try again later.', 429, 'rate_limited');
+        }
+        $orderNumber=trim((string)($data['order_number']??''));
+        $phone=normalize_phone((string)($data['phone']??''));
+        if($orderNumber===''||!preg_match('/^254\d{9}$/',$phone)) JsonResponse::error('Order number and a valid Kenyan phone number are required.',422,'validation_error');
+        $payment=(new MpesaService(Database::connection()))->statusForCustomer($orderNumber,$phone);
+        if(!$payment) JsonResponse::error('No M-Pesa payment was found for this order.',404,'payment_not_found');
+        JsonResponse::send([
+            'order_number'=>$payment['order_number'],
+            'status'=>$payment['status'],
+            'payment_status'=>$payment['payment_status'],
+            'receipt'=>$payment['mpesa_receipt'],
+            'message'=>$payment['result_description'],
+        ]);
+    }
+
+    public static function retryMpesa(): never
+    {
+        $data=Request::json();
+        if (RateLimiter::tooMany('payment-retry:' . Security::clientIp(), max(3, (int)($_ENV['PUBLIC_PAYMENT_RETRY_RATE_LIMIT_MAX'] ?? 5)), max(60, (int)($_ENV['PUBLIC_PAYMENT_RETRY_RATE_LIMIT_WINDOW'] ?? 900)))) {
+            JsonResponse::error('Too many payment retries. Please try again later.', 429, 'rate_limited');
+        }
+        $orderNumber=trim((string)($data['order_number']??''));
+        $phone=normalize_phone((string)($data['phone']??''));
+        if($orderNumber===''||!preg_match('/^254\d{9}$/',$phone)) JsonResponse::error('Order number and a valid Kenyan phone number are required.',422,'validation_error');
+        $db=Database::connection();
+        $stmt=$db->prepare('SELECT o.*, s.name AS shop_name, s.slug AS shop_slug FROM orders o INNER JOIN shops s ON s.id=o.shop_id WHERE o.order_number=:order_number AND o.customer_phone=:phone LIMIT 1');
+        $stmt->execute(['order_number'=>$orderNumber,'phone'=>$phone]);
+        $order=$stmt->fetch();
+        if(!$order) JsonResponse::error('Order not found.',404,'order_not_found');
+        if($order['payment_method']!=='mpesa') JsonResponse::error('This order does not use M-Pesa.',422,'invalid_payment_method');
+        if($order['payment_status']==='paid') JsonResponse::send(['status'=>'paid','message'=>'Payment has already been received.']);
+        if(in_array($order['status'],['cancelled','rejected'],true)) JsonResponse::error('This order can no longer accept payment.',422,'order_closed');
+        try {
+            $result=(new MpesaService($db))->initiate((int)$order['shop_id'],(int)$order['id'],(float)$order['total'],(string)$order['customer_phone'],(string)$order['currency'],(string)$order['order_number']);
+            $u=$db->prepare("UPDATE orders SET payment_status=\"pending\" WHERE id=:id AND payment_status <> 'paid'"); $u->execute(['id'=>$order['id']]);
+            JsonResponse::send(['status'=>'pending','message'=>'A new M-Pesa STK Push has been sent to your phone.','reused'=>!empty($result['reused'])]);
+        } catch(\Throwable $e) {
+            JsonResponse::error('We could not send the M-Pesa payment request. Please try again.',502,'mpesa_request_failed');
+        }
+    }
+
     public static function mpesaCallback(): never
     {
-        $payload = json_decode(file_get_contents('php://input') ?: '{}', true);
-        try { (new MpesaService(Database::connection()))->handleCallback(is_array($payload) ? $payload : []); } catch (\Throwable $e) { error_log('M-Pesa callback: '.$e->getMessage()); }
-        header('Content-Type: application/json');
-        echo json_encode(['ResultCode'=>0,'ResultDesc'=>'Accepted']);
+        $payload=json_decode(file_get_contents('php://input')?:'{}',true);
+        try {
+            (new MpesaService(Database::connection()))->handleCallback(is_array($payload)?$payload:[]);
+            http_response_code(200);
+            header('Content-Type: application/json');
+            echo json_encode(['ResultCode'=>0,'ResultDesc'=>'Accepted']);
+        } catch(\Throwable $e) {
+            error_log('M-Pesa callback processing failed: '.$e->getMessage());
+            http_response_code(500);
+            header('Content-Type: application/json');
+            echo json_encode(['ResultCode'=>1,'ResultDesc'=>'Callback processing failed']);
+        }
         exit;
     }
 

@@ -1,0 +1,17 @@
+<VirtualHost *:443>
+    ServerName dukame.example.com
+    DocumentRoot /var/www/dukame/public
+
+    <Directory /var/www/dukame/public>
+        AllowOverride All
+        Require all granted
+        Options -Indexes
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/dukame-error.log
+    CustomLog ${APACHE_LOG_DIR}/dukame-access.log combined
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/dukame.example.com/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/dukame.example.com/privkey.pem
+</VirtualHost>

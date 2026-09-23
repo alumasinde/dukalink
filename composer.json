@@ -16,6 +16,7 @@
         ]
     },
     "scripts": {
-        "serve": "php -S localhost:8000 -t public public/router.php"
+        "serve": "php -S localhost:8000 -t public public/router.php",
+        "qa": "php bin/qa.php"
     }
 }

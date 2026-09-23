@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const store = window.DUKAME_STORE;
     const cartKey = store?.slug ? `dukame_cart_${store.slug}` : null;
     const money = (value) => `${store?.currency || 'KES'} ${Number(value).toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-    const getCart = () => cartKey ? JSON.parse(localStorage.getItem(cartKey) || '[]') : [];
+    const getCart = () => { if (!cartKey) return []; try { const value = JSON.parse(localStorage.getItem(cartKey) || '[]'); return Array.isArray(value) ? value : []; } catch (_) { localStorage.removeItem(cartKey); return []; } };
     const saveCart = (cart) => { if (cartKey) localStorage.setItem(cartKey, JSON.stringify(cart)); };
     const setActiveStore = () => { if (store?.slug) { localStorage.setItem('dukame_active_store', store.slug); localStorage.setItem('dukame_active_currency', store.currency || 'KES'); } };
     setActiveStore();
@@ -145,8 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartUI();
     refreshAllCards();
 
-    function activeStore() { return localStorage.getItem('dukame_active_store') || ''; }
-    function pageCart() { const slug=activeStore(); return slug ? JSON.parse(localStorage.getItem(`dukame_cart_${slug}`)||'[]') : []; }
+    function activeStore() { return store?.slug || localStorage.getItem('dukame_active_store') || ''; }
+    function pageCart() { const slug=activeStore(); if (!slug) return []; try { const value=JSON.parse(localStorage.getItem(`dukame_cart_${slug}`)||'[]'); return Array.isArray(value) ? value : []; } catch (_) { localStorage.removeItem(`dukame_cart_${slug}`); return []; } }
     function pageCurrency() { return localStorage.getItem('dukame_active_currency') || store?.currency || 'KES'; }
     function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
 
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!slug){root.innerHTML='<div class="customer-empty"><div>🛒</div><h1>Your cart is empty</h1><p>Open a shop and add something you love.</p><a class="customer-primary-action inline" href="/">Browse Dukame</a></div>';return;}
         if(!cart.length){root.innerHTML='<div class="customer-empty"><div>🛒</div><h1>Your cart is empty</h1><p>Add products from this store and they will appear here.</p><a class="customer-primary-action inline" href="/'+encodeURIComponent(slug)+'">Continue shopping</a></div>';return;}
         const total=cart.reduce((s,i)=>s+i.price*i.quantity,0);
-        root.innerHTML=`<div class="customer-section-heading"><div><span class="customer-eyebrow">YOUR ORDER</span><h1>Cart</h1></div><span class="customer-count">${cart.length} products</span></div><div class="cart-layout"><div class="cart-items">${cart.map((i,idx)=>{const limited=i.trackInventory===true||i.trackInventory==='1';const max=limited?Number(i.stock||0):Infinity;return `<div class="cart-item"><div class="cart-item-image">${i.image?`<img src="${escapeHtml(i.image)}" alt="">`:'◇'}</div><div class="cart-item-info"><strong>${escapeHtml(i.name)}</strong>${i.options?.length?`<small>${escapeHtml(i.options.join(' · '))}</small>`:''}<span>${pageCurrency()} ${Number(i.price).toLocaleString('en-KE',{minimumFractionDigits:2})}</span><div class="cart-item-actions"><button data-cart-minus="${idx}">−</button><b>${i.quantity}</b><button data-cart-plus="${idx}" ${limited&&i.quantity>=max?'disabled':''}>+</button><button class="remove-cart" data-cart-remove="${idx}">Remove</button></div>${limited?`<small class="cart-stock-note">${Math.max(0,max-i.quantity)} remaining in stock</small>`:''}</div><strong>${pageCurrency()} ${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2})}</strong></div>`;}).join('')}</div><aside class="cart-summary"><span>Subtotal</span><strong>${pageCurrency()} ${total.toLocaleString('en-KE',{minimumFractionDigits:2})}</strong><small>Final delivery details are collected at checkout.</small><a class="customer-primary-action inline" href="/checkout">Continue to checkout</a></aside></div>`;
+        root.innerHTML=`<div class="customer-section-heading"><div><span class="customer-eyebrow">YOUR ORDER</span><h1>Cart</h1></div><span class="customer-count">${cart.length} products</span></div><div class="cart-layout"><div class="cart-items">${cart.map((i,idx)=>{const limited=i.trackInventory===true||i.trackInventory==='1';const max=limited?Number(i.stock||0):Infinity;return `<div class="cart-item"><div class="cart-item-image">${i.image?`<img src="${escapeHtml(i.image)}" alt="">`:'◇'}</div><div class="cart-item-info"><strong>${escapeHtml(i.name)}</strong>${i.options?.length?`<small>${escapeHtml(i.options.join(' · '))}</small>`:''}<span>${pageCurrency()} ${Number(i.price).toLocaleString('en-KE',{minimumFractionDigits:2})}</span><div class="cart-item-actions"><button data-cart-minus="${idx}">−</button><b>${i.quantity}</b><button data-cart-plus="${idx}" ${limited&&i.quantity>=max?'disabled':''}>+</button><button class="remove-cart" data-cart-remove="${idx}">Remove</button></div>${limited?`<small class="cart-stock-note">${Math.max(0,max-i.quantity)} remaining in stock</small>`:''}</div><strong>${pageCurrency()} ${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2})}</strong></div>`;}).join('')}</div><aside class="cart-summary"><span>Subtotal</span><strong>${pageCurrency()} ${total.toLocaleString('en-KE',{minimumFractionDigits:2})}</strong><small>Final delivery details are collected at checkout.</small><a class="customer-primary-action inline" href="/checkout?shop=${encodeURIComponent(slug)}">Continue to checkout</a></aside></div>`;
         root.querySelectorAll('[data-cart-minus]').forEach(b=>b.onclick=()=>changeCart(Number(b.dataset.cartMinus),-1)); root.querySelectorAll('[data-cart-plus]').forEach(b=>b.onclick=()=>changeCart(Number(b.dataset.cartPlus),1)); root.querySelectorAll('[data-cart-remove]').forEach(b=>b.onclick=()=>{const c=pageCart();c.splice(Number(b.dataset.cartRemove),1);savePageCart(c);renderCart();});
     }
     function savePageCart(c){const slug=activeStore();localStorage.setItem(`dukame_cart_${slug}`,JSON.stringify(c));}
@@ -218,12 +218,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 const minimum=fulfillment.free_delivery_minimum===null?null:Number(fulfillment.free_delivery_minimum); document.getElementById('freeDeliveryNote').textContent=(!isPickup&&minimum&&subtotal>=minimum)?'Free delivery applied to this order.':(!isPickup&&minimum?'Free delivery applies from '+currency+' '+minimum.toLocaleString('en-KE',{minimumFractionDigits:2})+'.':'');
             };
             form.addEventListener('change',e=>{if(e.target.name==='fulfillment_method'||e.target.name==='delivery_zone_id')sync();}); sync();
+            const watchMpesa=async(order,phone,mpesa)=>{
+                if(!mpesa||mpesa.status!=='pending') return;
+                const note=()=>root.querySelector('[data-payment-note]');
+                let attempts=0;
+                const poll=async()=>{
+                    attempts++;
+                    try{
+                        const r=await fetch('/api/v1/orders/payment-status',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({order_number:order.order_number,phone})});
+                        const json=await r.json();
+                        if(!r.ok||!json.success) return;
+                        const p=json.data;
+                        const el=note();
+                        if(!el) return;
+                        if(p.status==='paid'||p.payment_status==='paid'){
+                            el.className='payment-success-note';
+                            el.innerHTML='<strong>Payment received.</strong> Your M-Pesa payment has been confirmed.';
+                            return;
+                        }
+                        if(p.status==='failed'){
+                            el.className='payment-failed-note';
+                            el.innerHTML='<strong>Payment not confirmed.</strong> '+escapeHtml(p.message||'The M-Pesa payment was not completed.')+' <button type="button" class="secondary-action" data-retry-mpesa>Try M-Pesa again</button>';
+                            root.querySelector('[data-retry-mpesa]')?.addEventListener('click',async()=>{
+                                const button=root.querySelector('[data-retry-mpesa]'); if(!button)return; button.disabled=true; button.textContent='Sending STK…';
+                                try{
+                                    const rr=await fetch('/api/v1/orders/mpesa/retry',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({order_number:order.order_number,phone})});
+                                    const jj=await rr.json(); if(!rr.ok||!jj.success) throw new Error(jj.error?.message||'Could not retry M-Pesa.');
+                                    el.className='payment-pending-note'; el.innerHTML='<strong>Check your phone.</strong> A new M-Pesa STK Push has been sent.';
+                                    attempts=0; setTimeout(poll,1500);
+                                }catch(ex){button.disabled=false;button.textContent='Try M-Pesa again';el.insertAdjacentHTML('beforeend','<div class="small mt-2">'+escapeHtml(ex.message)+'</div>');}
+                            });
+                            return;
+                        }
+                        if(attempts<30) setTimeout(poll,3000);
+                    }catch(_){ if(attempts<30) setTimeout(poll,3000); }
+                };
+                setTimeout(poll,2500);
+            };
             const submitOrder=async(channel)=>{
                 if(!form.reportValidity()) return;
                 const selectedPayment=form.querySelector('input[name=payment_method]:checked'); if(!selectedPayment){const err=form.querySelector('[data-checkout-error]');err.textContent='Please select a payment method.';err.hidden=false;return;}
                 const clicked=channel==='whatsapp'?form.querySelector('[data-order-action=whatsapp]'):submit, buttons=form.querySelectorAll('button[type=submit],[data-order-action=whatsapp]'), err=form.querySelector('[data-checkout-error]'); err.hidden=true; buttons.forEach(b=>b.disabled=true); clicked.textContent=channel==='whatsapp'?'Creating order…':'Placing order…';
                 const data=Object.fromEntries(new FormData(form).entries()); data.shop_slug=slug; data.order_channel=channel; data.items=cart.map(i=>({product_id:i.id,quantity:i.quantity,options:i.options||[]}));
-                try{const r=await fetch('/api/v1/orders',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(data)});const json=await r.json();if(!r.ok||!json.success)throw new Error(json.error?.message||'Could not create your order.');const order=json.data.order;localStorage.removeItem(`dukame_cart_${slug}`);const whatsapp=json.data.whatsapp_url;const mpesa=json.data.mpesa;const fulfillmentText=order.fulfillment_method==='pickup'?'Store pickup':'Delivery';const paymentNote=mpesa?.status==='pending'?'<div class="payment-pending-note"><strong>Check your phone.</strong> An M-Pesa STK Push has been sent. Complete the payment to finish your payment.</div>':(order.payment_status==='paid'?'<div class="payment-success-note"><strong>Payment received.</strong> Your payment has been confirmed.</div>':'');root.innerHTML=`<div class="order-success"><div class="success-icon">✓</div><span class="customer-eyebrow">ORDER PLACED</span><h1>Thank you, ${escapeHtml(order.customer_first_name||'')}.</h1><p>Your order <strong>${escapeHtml(order.order_number)}</strong> has been placed with ${escapeHtml(order.shop_name||'')}.</p><div class="success-order-number">${escapeHtml(order.order_number)}</div><p class="success-note">${fulfillmentText==='Store pickup'?'You chose store pickup.':'Your delivery details have been saved.'} Keep your order number and phone number to track your order.</p>${paymentNote}${channel==='whatsapp'&&whatsapp?`<a class="customer-whatsapp-action inline" href="${escapeHtml(whatsapp)}">Open WhatsApp and Send Order</a>`:''}${channel!=='whatsapp'&&whatsapp?`<a class="secondary-action" href="${escapeHtml(whatsapp)}">Also send order on WhatsApp</a>`:''}<a class="customer-primary-action inline" href="/track">Track your order</a><a class="secondary-action" href="/${encodeURIComponent(slug)}">Continue shopping</a></div>`;if(channel==='whatsapp'&&whatsapp)window.location.href=whatsapp;}catch(ex){err.textContent=ex.message;err.hidden=false;buttons.forEach(b=>b.disabled=false);clicked.textContent=channel==='whatsapp'?'Order on WhatsApp':'Place order';}}
+                try{const r=await fetch('/api/v1/orders',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(data)});const json=await r.json();if(!r.ok||!json.success)throw new Error(json.error?.message||'Could not create your order.');const order=json.data.order;localStorage.removeItem(`dukame_cart_${slug}`);const whatsapp=json.data.whatsapp_url;const mpesa=json.data.mpesa;const fulfillmentText=order.fulfillment_method==='pickup'?'Store pickup':'Delivery';const paymentNote=mpesa?.status==='pending'?'<div class="payment-pending-note" data-payment-note><strong>Check your phone.</strong> An M-Pesa STK Push has been sent. We are waiting for payment confirmation…</div>':(order.payment_status==='paid'?'<div class="payment-success-note" data-payment-note><strong>Payment received.</strong> Your payment has been confirmed.</div>':(order.payment_method==='mpesa'?'<div class="payment-failed-note" data-payment-note><strong>Payment not confirmed.</strong> You can track the order and retry M-Pesa if needed.</div>':''));root.innerHTML=`<div class="order-success"><div class="success-icon">✓</div><span class="customer-eyebrow">ORDER PLACED</span><h1>Thank you, ${escapeHtml(order.customer_first_name||'')}.</h1><p>Your order <strong>${escapeHtml(order.order_number)}</strong> has been placed with ${escapeHtml(order.shop_name||'')}.</p><div class="success-order-number">${escapeHtml(order.order_number)}</div><p class="success-note">${fulfillmentText==='Store pickup'?'You chose store pickup.':'Your delivery details have been saved.'} Keep your order number and phone number to track your order.</p>${paymentNote}${channel==='whatsapp'&&whatsapp?`<a class="customer-whatsapp-action inline" href="${escapeHtml(whatsapp)}">Open WhatsApp and Send Order</a>`:''}${channel!=='whatsapp'&&whatsapp?`<a class="secondary-action" href="${escapeHtml(whatsapp)}">Also send order on WhatsApp</a>`:''}<a class="customer-primary-action inline" href="/track">Track your order</a><a class="secondary-action" href="/${encodeURIComponent(slug)}">Continue shopping</a></div>`;if(channel==='whatsapp'&&whatsapp)window.location.href=whatsapp; if(mpesa?.status==='pending') watchMpesa(order,data.customer_phone,mpesa);}catch(ex){err.textContent=ex.message;err.hidden=false;buttons.forEach(b=>b.disabled=false);clicked.textContent=channel==='whatsapp'?'Order on WhatsApp':'Place order';}}
             form.addEventListener('submit',e=>{e.preventDefault();submitOrder('web');});form.querySelector('[data-order-action=whatsapp]').addEventListener('click',()=>submitOrder('whatsapp'));
         }catch(ex){root.innerHTML='<div class="customer-empty"><div>!</div><h1>Checkout unavailable</h1><p>'+escapeHtml(ex.message)+'</p><a class="customer-primary-action inline" href="/'+encodeURIComponent(slug)+'">Back to shop</a></div>';}
     }

@@ -13,9 +13,11 @@ final class TextSmsClient {
         $ch=curl_init($url); curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>['Content-Type: application/json','Accept: application/json'],CURLOPT_POSTFIELDS=>$payload,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>15]);
         $raw=curl_exec($ch); $errno=curl_errno($ch); $error=curl_error($ch); $http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); curl_close($ch);
         if($raw===false||$errno) throw new \RuntimeException('TextSMS request failed: '.($error?:'connection error'));
-        $json=json_decode($raw,true); $response=is_array($json)?($json['responses'][0]??[]):[];
+        $json=json_decode($raw,true);
+        if(!is_array($json)) throw new \RuntimeException('TextSMS returned an invalid response.');
+        $response=is_array($json['responses']??null)?($json['responses'][0]??[]):$json;
         $code=(string)($response['respose-code']??$response['response-code']??$response['response_code']??'');
-        $sent=$http>=200&&$http<300&&$code==='200';
+        $sent=$http>=200&&$http<300&&in_array($code,['200','201'],true);
         return ['sent'=>$sent,'skipped'=>false,'http_code'=>$http,'code'=>$code,'message_id'=>$response['messageid']??null,'description'=>$response['response-description']??null,'raw'=>$raw];
     }
 }

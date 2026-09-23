@@ -1,0 +1,29 @@
+/* Dukame Orders — page-level styles. Keep visual tokens in styles/variables.css. */
+.orders-page .orders-summary-card { display:block;height:100%;padding:18px;color:var(--dk-text);background:var(--dk-surface);border:1px solid var(--dk-border);border-radius:16px;transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease; }
+.orders-page .orders-summary-card:hover { border-color:color-mix(in srgb,var(--dk-primary) 30%,var(--dk-border));transform:translateY(-2px);box-shadow:var(--dk-shadow-sm); }
+.orders-page .orders-summary-card.active { border-color:var(--dk-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--dk-primary) 10%,transparent); }
+.orders-page .orders-filter-bar { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--dk-border); }
+.orders-page .orders-filter-tabs { display:flex;flex-wrap:wrap;gap:7px; }
+.orders-page .order-row-link { color:var(--dk-text); }
+.orders-page .order-row-link:hover { color:var(--dk-primary); }
+.orders-page .order-total { font-weight:800;white-space:nowrap; }
+.orders-page .order-date { white-space:nowrap;color:var(--dk-muted);font-size:.82rem; }
+.orders-page .order-detail-card { padding:24px; }
+.orders-page .order-detail-total { min-width:220px;padding:16px;border-radius:14px;background:var(--dk-bg); }
+.orders-page .order-action-row { display:flex;flex-wrap:wrap;gap:8px; }
+.orders-page .order-meta-list { display:grid;gap:13px; }
+.orders-page .order-meta-item { display:flex;justify-content:space-between;gap:18px; }
+.orders-page .order-meta-item>:first-child { color:var(--dk-muted);font-size:.84rem; }
+.orders-page .order-meta-item>:last-child { text-align:right;font-weight:650; }
+@media (max-width:767.98px) {
+ .orders-page .orders-filter-bar { align-items:flex-start;flex-direction:column; }
+ .orders-page .order-detail-card { padding:18px; }
+ .orders-page .order-detail-total { min-width:0;width:100%; }
+ .orders-page .order-meta-item { flex-direction:column;gap:3px; }
+ .orders-page .order-meta-item>:last-child { text-align:left; }
+ .orders-page .table thead { display:none; }
+ .orders-page .orders-table tbody tr { display:grid;gap:8px;padding:15px 0;border-bottom:1px solid var(--dk-border); }
+ .orders-page .orders-table tbody tr:last-child { border-bottom:0; }
+ .orders-page .orders-table tbody td { padding:0 18px;border:0; }
+ .orders-page .orders-table tbody td:last-child { padding-top:4px; }
+}

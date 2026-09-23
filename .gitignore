@@ -3,3 +3,5 @@
 /storage/logs/*
 /storage/uploads/*
 !.gitkeep
+/storage/rate-limits/*
+!/storage/rate-limits/.gitkeep

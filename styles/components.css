@@ -1,0 +1,16 @@
+.navbar{--bs-navbar-padding-y:.65rem}.navbar .nav-link{color:#475569;font-weight:600}.navbar .nav-link:hover{color:var(--dk-primary)}.progress{height:7px;background:#E2E8F0}.progress-bar{background:var(--dk-primary)}.alert{border-radius:12px}@media(max-width:576px){.navbar .btn{margin-top:.75rem}}
+
+.store-logo{width:48px;height:48px;border-radius:14px;overflow:hidden;display:grid;place-items:center;background:var(--dk-primary-soft);color:var(--dk-primary);font-weight:800;font-size:1.1rem;flex:0 0 auto}.store-logo img{width:100%;height:100%;object-fit:cover}
+
+/* Payment settings */
+.payment-settings-status{display:flex;flex-direction:column;gap:2px;padding:.8rem 1rem;border-radius:.75rem;background:#f3f4f6;color:#374151}
+.payment-settings-status.is-enabled{background:#ecfdf3;color:#166534}
+.payment-settings-status span{font-size:.82rem;color:#6b7280}
+.payment-settings-status.is-enabled span{color:#15803d}
+.payment-method-preview{border:1px solid #e5e7eb;border-radius:.75rem;overflow:hidden}
+.payment-method-preview>div{display:flex;justify-content:space-between;gap:1rem;padding:.85rem 1rem;border-bottom:1px solid #e5e7eb}
+.payment-method-preview>div:last-child{border-bottom:0}
+.payment-method-preview strong{font-size:.82rem}
+.payment-unavailable{padding:1rem;border:1px solid #f1d6d6;border-radius:.75rem;background:#fff8f8;color:#7f1d1d}
+.payment-unavailable p{margin:.25rem 0 .6rem;color:#6b7280;font-size:.9rem}
+.payment-unavailable a{font-weight:700;color:inherit}
