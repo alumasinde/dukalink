@@ -6,6 +6,7 @@
   --dk-accent-soft: color-mix(in srgb, var(--dk-accent) 10%, #fff);
   --dk-bg: #f8fafc;
   --dk-surface: #ffffff;
+  --dk-text-light: #fde68a;
   --dk-text: #111827;
   --dk-muted: #64748b;
   --dk-border: #e5e7eb;

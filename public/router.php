@@ -68,6 +68,15 @@ if ($route === $adminLink) {
     return true;
 }
 
+// Fixed application routes take priority over the generic platform-admin
+// patterns below, so a merchant route like settings/payments can never be
+// shadowed by the admin_link/action regex (e.g. when ADMIN_LINK is set to
+// something that happens to share a segment name with a merchant route).
+if (isset($webRoutes[$route])) {
+    require $root . '/' . $webRoutes[$route];
+    return true;
+}
+
 if (preg_match('#^([a-z0-9_-]+)/(merchants|shops)/(?:view/)?([0-9]+)$#i', $route, $m)) {
     if (strtolower($m[1]) !== $adminLink) {
         $notFound();
@@ -107,12 +116,6 @@ if (preg_match('#^shop/([a-z0-9]+(?:-[a-z0-9]+)*)$#i', $route, $m)) {
 
 if ($route === 'shop') {
     $notFound();
-    return true;
-}
-
-// Fixed application routes.
-if (isset($webRoutes[$route])) {
-    require $root . '/' . $webRoutes[$route];
     return true;
 }
 
