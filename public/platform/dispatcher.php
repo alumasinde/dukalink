@@ -13,6 +13,6 @@ if ($requested === '' || !hash_equals($configured, $requested)) {
     exit;
 }
 $action = (string)($_GET['action'] ?? 'login');
-$files = ['login'=>'login.php','logout'=>'logout.php','dashboard'=>'index.php','plans'=>'plans.php'];
+$files = ['login'=>'login.php','logout'=>'logout.php','dashboard'=>'index.php','plans'=>'plans.php','merchants'=>'merchants.php','shops'=>'shops.php','orders'=>'orders.php','subscriptions'=>'subscriptions.php','payments'=>'payments.php','users'=>'users.php','audit'=>'audit.php','merchant-view'=>'merchant.php','shop-view'=>'shop.php'];
 if (!isset($files[$action])) { http_response_code(404); require dirname(__DIR__) . '/404.php'; exit; }
 require __DIR__ . '/' . $files[$action];

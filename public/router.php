@@ -42,7 +42,20 @@ if ($route === $adminLink) {
     return true;
 }
 
-if (preg_match('#^([a-z0-9_-]+)/(login|logout|dashboard|plans)$#i', $route, $m)) {
+if (preg_match('#^([a-z0-9_-]+)/(merchants|shops)/(?:view/)?([0-9]+)$#i', $route, $m)) {
+    if (strtolower($m[1]) !== $adminLink) {
+        http_response_code(404);
+        require __DIR__ . '/404.php';
+        return true;
+    }
+    $_GET['admin_link'] = strtolower($m[1]);
+    $_GET['action'] = strtolower($m[2]) === 'merchants' ? 'merchant-view' : 'shop-view';
+    $_GET['id'] = (int)$m[3];
+    require __DIR__ . '/platform/dispatcher.php';
+    return true;
+}
+
+if (preg_match('#^([a-z0-9_-]+)/(login|logout|dashboard|plans|merchants|shops|orders|subscriptions|payments|users|audit)$#i', $route, $m)) {
     if (strtolower($m[1]) !== $adminLink) {
         http_response_code(404);
         require __DIR__ . '/404.php';

@@ -8,8 +8,11 @@ use App\Database\Database;
 use App\Support\Csrf;
 use App\Support\PlatformAuth;
 use App\Support\Session;
+use App\Modules\Platform\PlatformAuditService;
 
 new App();
+$db = Database::connection();
+$audit = new PlatformAuditService($db);
 $base = PlatformAuth::basePath();
 if (PlatformAuth::check()) { header('Location: ' . $base); exit; }
 
@@ -22,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($login === '' || $password === '') {
             Session::flash('error', 'Invalid email or password.');
         } else {
-            $stmt = Database::connection()->prepare(
+            $stmt = $db->prepare(
                 'SELECT id, password_hash, status, role FROM platform_users
                  WHERE (phone = :login OR email = :email) LIMIT 1'
             );
@@ -31,9 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$account || $account['status'] !== 'active' || !in_array($account['role'], ['admin','super_admin'], true) || !password_verify($password, $account['password_hash'])) {
                 Session::flash('error', 'The login details are incorrect.');
             } else {
-                $update = Database::connection()->prepare('UPDATE platform_users SET last_login_at = CURRENT_TIMESTAMP WHERE id = :id');
+                $update = $db->prepare('UPDATE platform_users SET last_login_at = CURRENT_TIMESTAMP WHERE id = :id');
                 $update->execute(['id' => (int)$account['id']]);
                 PlatformAuth::login((int)$account['id']);
+                $audit->record((int)$account['id'], 'platform_user.login', 'Platform user signed in', 'platform_user', (int)$account['id']);
                 header('Location: ' . $base);
                 exit;
             }

@@ -2,7 +2,8 @@ RewriteEngine On
 
 # Platform administration. The dispatcher validates the requested link against ADMIN_LINK from .env.
 # This keeps /admin/login invalid even if someone guesses the old path.
-RewriteRule ^([a-zA-Z0-9_-]+)/(login|logout|dashboard|plans)/?$ platform/dispatcher.php?admin_link=$1&action=$2 [L,QSA]
+RewriteRule ^([a-zA-Z0-9_-]+)/(merchants|shops)/(?:view/)?([0-9]+)/?$ platform/dispatcher.php?admin_link=$1&action=$2-view&id=$3 [L,QSA]
+RewriteRule ^([a-zA-Z0-9_-]+)/(login|logout|dashboard|plans|merchants|shops|orders|subscriptions|payments|users|audit)/?$ platform/dispatcher.php?admin_link=$1&action=$2 [L,QSA]
 
 # Dynamic SEO endpoints
 RewriteRule ^robots\.txt$ seo/robots.php [L,QSA]
