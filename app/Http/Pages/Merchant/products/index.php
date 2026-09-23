@@ -25,7 +25,7 @@ $shopId = (int)$merchant['id'];
 $productRepo = new ProductRepository($db);
 $entitlements = new EntitlementService($db);
 $productLimit = $entitlements->limit($shopId, 'products.max');
-$productUsage = $entitlements->usage($shopId);
+$productUsage = $entitlements->usage($shopId, 'products.max');
 $productLimitReached = $productLimit !== null && $productUsage >= $productLimit;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

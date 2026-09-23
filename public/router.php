@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 
-require $root . '/vendor/autoload.php';
-
-use App\Bootstrap\App;
-
-new App();
-
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $path = rawurldecode($path);
 $path = '/' . ltrim(preg_replace('#/+#', '/', $path) ?? '/', '/');
 $path = $path === '/' ? '/' : rtrim($path, '/');
 
+// Let PHP's built-in server serve existing static files directly.
+// This avoids booting the application for CSS, JS, images, etc.
 $staticFile = __DIR__ . $path;
 if ($path !== '/' && is_file($staticFile)) {
     return false;
 }
+
+require $root . '/vendor/autoload.php';
+
+use App\Bootstrap\App;
+
+new App();
 
 $route = trim($path, '/');
 
